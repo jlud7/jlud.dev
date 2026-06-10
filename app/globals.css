@@ -408,10 +408,39 @@ body {
   transform: scale(1.045);
 }
 
+/* image that fills the column of a wide (side-by-side) card */
+.preview-fill {
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+}
+
+@media (min-width: 768px) {
+  .project-card.wide .preview-fill,
+  .wide-card .preview-fill {
+    aspect-ratio: auto;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.preview-fill img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  transform: scale(1.005);
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.project-card:hover .preview-fill img,
+.wide-card:hover .preview-fill img {
+  transform: scale(1.045);
+}
+
 /* tags */
 .tag {
   display: inline-block;
-  padding: 0.22rem 0.65rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 999px;
   font-family: var(--font-mono), monospace;
   font-size: 0.65rem;

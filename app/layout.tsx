@@ -20,11 +20,11 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "James Luddy — JLUD.dev",
+  title: "James Luddy · JLUD.dev",
   description:
     "Games, tools & curiosities for the web. Portfolio of James Luddy: multiplayer card games, color science, chess scorekeeping, LED matrices, and more.",
   openGraph: {
-    title: "James Luddy — JLUD.dev",
+    title: "James Luddy · JLUD.dev",
     description: "Games, tools & curiosities for the web.",
     url: "https://jlud.dev",
     siteName: "JLUD.dev",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "James Luddy — JLUD.dev",
+    title: "James Luddy · JLUD.dev",
     description: "Games, tools & curiosities for the web.",
   },
 };
