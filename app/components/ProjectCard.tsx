@@ -1,25 +1,30 @@
 "use client";
 
-type Project = {
+import { MouseEvent } from "react";
+
+export type Project = {
   title: string;
+  year: string;
+  kind: string;
   description: string;
   tags: string[];
-  link?: string;
-  github?: string;
-  image?: string;
+  image: string;
+  domain: string;
+  live?: string;
+  github: string;
 };
 
-function ArrowIcon() {
+function ExternalIcon({ size = 11 }: { size?: number }) {
   return (
     <svg
-      width="14"
-      height="14"
+      width={size}
+      height={size}
       viewBox="0 0 14 14"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M1 13L13 1M13 1H3M13 1V11"
+        d="M1 13L13 1M13 1H4M13 1V10"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -29,68 +34,103 @@ function ArrowIcon() {
   );
 }
 
-export default function ProjectCard({ project }: { project: Project }) {
-  const Wrapper = project.link ? "a" : "div";
-  const wrapperProps = project.link
-    ? { href: project.link, target: "_blank" as const, rel: "noopener noreferrer" }
-    : {};
+export default function ProjectCard({
+  project,
+  compact = false,
+}: {
+  project: Project;
+  compact?: boolean;
+}) {
+  const onMouseMove = (e: MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+    el.style.setProperty("--my", `${e.clientY - rect.top}px`);
+  };
+
+  const primaryHref = project.live ?? project.github;
 
   return (
-    <Wrapper {...wrapperProps} className="project-card block cursor-pointer group">
-      {project.image && (
-        <div className="mb-4 rounded-lg overflow-hidden bg-gray-100 aspect-video">
+    <article
+      className="project-card"
+      onMouseMove={onMouseMove}
+      data-cursor={project.live ? "view" : "code"}
+      onClick={(e) => {
+        // make the whole card clickable without nesting anchors
+        if ((e.target as Element).closest("a")) return;
+        window.open(primaryHref, "_blank", "noopener,noreferrer");
+      }}
+    >
+      <div className="preview-frame">
+        <div className="preview-chrome">
+          <span className="dot" />
+          <span className="dot" />
+          <span className="dot" />
+          <span className="domain">{project.domain}</span>
+        </div>
+        <div className="preview-img-wrap">
+          {/* static export — plain img keeps it simple and fast */}
           <img
             src={project.image}
-            alt={project.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            alt={`Preview of ${project.title}`}
+            loading="lazy"
           />
         </div>
-      )}
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <h3 className="text-lg font-semibold tracking-tight">{project.title}</h3>
-        {project.link && (
-          <span className="mt-1 opacity-40 group-hover:opacity-100 transition-opacity">
-            <ArrowIcon />
-          </span>
-        )}
       </div>
-      <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--muted)" }}>
-        {project.description}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {project.tags.map((tag) => (
-          <span key={tag} className="tag">
-            {tag}
-          </span>
-        ))}
-      </div>
-      {project.github && (
-        <a
-          href={project.github}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="arrow-link mt-4 text-xs"
-          style={{ color: "var(--muted)" }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          View Source
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 14 14"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+
+      <div className={`flex flex-col flex-1 ${compact ? "p-5" : "p-6 sm:p-7"}`}>
+        <div className="flex items-baseline justify-between gap-3 mb-2">
+          <h3
+            className={`font-semibold tracking-tight ${
+              compact ? "text-base" : "text-xl"
+            }`}
           >
-            <path
-              d="M1 7H13M13 7L7 1M13 7L7 13"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </a>
-      )}
-    </Wrapper>
+            {project.title}
+          </h3>
+          <span
+            className="font-mono text-[0.65rem] tracking-widest uppercase shrink-0"
+            style={{ color: "var(--faint)" }}
+          >
+            {project.kind} · {project.year}
+          </span>
+        </div>
+
+        <p
+          className={`leading-relaxed mb-4 ${compact ? "text-[0.8rem]" : "text-sm"}`}
+          style={{ color: "var(--muted)" }}
+        >
+          {project.description}
+        </p>
+
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {project.tags.map((tag) => (
+            <span key={tag} className="tag">
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-auto flex items-center gap-5">
+          {project.live && (
+            <a
+              href={project.live}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card-link"
+            >
+              Live site <ExternalIcon />
+            </a>
+          )}
+          <a
+            href={project.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card-link secondary"
+          >
+            GitHub <ExternalIcon />
+          </a>
+        </div>
+      </div>
+    </article>
   );
 }

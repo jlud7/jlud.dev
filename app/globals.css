@@ -1,19 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
-  --foreground: #111111;
-  --accent: #555555;
-  --muted: #888888;
-  --card-bg: rgba(255, 255, 255, 0.85);
-  --card-border: rgba(0, 0, 0, 0.06);
+  --paper: #f3eee4;
+  --ink: #1c1813;
+  --muted: #847a6c;
+  --faint: #a89d8d;
+  --accent: #b4543a;
+  --palm: #3f5a3c;
+  --card-bg: rgba(255, 252, 245, 0.66);
+  --card-border: rgba(28, 24, 19, 0.08);
+  --line: rgba(28, 24, 19, 0.1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-instrument-serif);
 }
 
 * {
@@ -27,103 +31,508 @@ html {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
 }
 
 ::selection {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(180, 84, 58, 0.18);
 }
 
-/* Video background */
-.video-bg {
+.serif-accent {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Shader background ---------- */
+.shader-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  /* graceful fallback while WebGL warms up / if unavailable */
+  background:
+    radial-gradient(120% 90% at 85% 0%, #f9f1e1 0%, transparent 60%),
+    linear-gradient(160deg, #f6f1e6 0%, #efe9db 100%);
+}
+
+/* ---------- Custom cursor ---------- */
+@media (pointer: fine) {
+  html.has-cursor,
+  html.has-cursor * {
+    cursor: none !important;
+  }
+}
+
+.cursor-dot,
+.cursor-ring {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  z-index: 0;
-  opacity: 0.35;
+  z-index: 9999;
   pointer-events: none;
+  border-radius: 999px;
+  will-change: transform;
 }
 
-/* Hero section */
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background: var(--ink);
+  transition: opacity 0.25s ease, width 0.2s ease, height 0.2s ease,
+    margin 0.2s ease;
+}
+
+.cursor-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border: 1.5px solid rgba(28, 24, 19, 0.45);
+  background: rgba(255, 252, 245, 0);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: transparent;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    margin 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease,
+    border-color 0.3s ease, color 0.2s ease, opacity 0.25s ease;
+}
+
+.cursor-hidden .cursor-dot,
+.cursor-hidden .cursor-ring {
+  opacity: 0;
+}
+
+/* hovering any interactive element */
+.cursor-link .cursor-ring {
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-color: rgba(180, 84, 58, 0.85);
+  background: rgba(180, 84, 58, 0.08);
+}
+
+/* hovering an element with a label (project cards) */
+.cursor-label .cursor-ring {
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.cursor-label .cursor-dot {
+  opacity: 0;
+}
+
+.cursor-down .cursor-ring {
+  transform: scale(0.82);
+}
+
+/* click burst particles */
+.cursor-particle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9998;
+  pointer-events: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  animation: particle-fly 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes particle-fly {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--px), var(--py)) scale(0.2);
+  }
+}
+
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .cursor-dot,
+  .cursor-ring,
+  .cursor-particle {
+    display: none;
+  }
+  html.has-cursor,
+  html.has-cursor * {
+    cursor: auto !important;
+  }
+}
+
+/* ---------- Nav ---------- */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(243, 238, 228, 0.55);
+  border-bottom: 1px solid rgba(28, 24, 19, 0.06);
+}
+
+.nav-link {
+  position: relative;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link:hover {
+  color: var(--ink);
+}
+
+.nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ---------- Hero ---------- */
 .hero {
   position: relative;
-  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: flex-start;
-  padding: 2rem;
   z-index: 1;
 }
 
-/* Scroll indicator */
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(8px);
+  }
 }
 
 .scroll-indicator {
   animation: float 2.5s ease-in-out infinite;
 }
 
-/* Project cards */
-.project-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
-  padding: 2rem;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
+/* ---------- Marquee ---------- */
+.marquee {
   overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 252, 245, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-.project-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(0, 0, 0, 0.08),
-    transparent
-  );
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 36s linear infinite;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.75rem;
+  padding-right: 1.75rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.marquee-item .spark {
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* ---------- Project cards ---------- */
+.project-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--card-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.45s ease;
 }
 
 .project-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.1);
-  border-color: rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px);
+  border-color: rgba(28, 24, 19, 0.16);
+  box-shadow: 0 30px 70px -20px rgba(60, 45, 25, 0.22);
 }
 
-/* Tag pills */
+/* spotlight that follows the cursor */
+.project-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 244, 214, 0.55),
+    transparent 65%
+  );
+  mix-blend-mode: soft-light;
+}
+
+.project-card:hover::after {
+  opacity: 1;
+}
+
+/* browser-chrome frame around previews */
+.preview-frame {
+  position: relative;
+  margin: 10px 10px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(28, 24, 19, 0.1);
+  background: #efe9dc;
+}
+
+.preview-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 252, 245, 0.85);
+  border-bottom: 1px solid rgba(28, 24, 19, 0.07);
+}
+
+.preview-chrome .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(28, 24, 19, 0.14);
+  transition: background 0.3s ease;
+}
+
+.project-card:hover .preview-chrome .dot:nth-child(1) {
+  background: #e2674f;
+}
+.project-card:hover .preview-chrome .dot:nth-child(2) {
+  background: #e0a33e;
+}
+.project-card:hover .preview-chrome .dot:nth-child(3) {
+  background: #6fa168;
+}
+
+.preview-chrome .domain {
+  margin-left: 0.25rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-img-wrap {
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+}
+
+.preview-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  transform: scale(1.005);
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.project-card:hover .preview-img-wrap img {
+  transform: scale(1.045);
+}
+
+/* tags */
 .tag {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
+  padding: 0.22rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  background: rgba(0, 0, 0, 0.04);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  background: rgba(28, 24, 19, 0.05);
+  border: 1px solid rgba(28, 24, 19, 0.05);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* card action links */
+.card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink);
+  transition: color 0.25s ease, gap 0.25s ease;
+}
+
+.card-link:hover {
   color: var(--accent);
-  transition: all 0.2s ease;
+  gap: 0.6rem;
 }
 
-.tag:hover {
-  background: rgba(0, 0, 0, 0.08);
+.card-link.secondary {
+  color: var(--muted);
 }
 
-/* Fade in animation */
+.card-link.secondary:hover {
+  color: var(--ink);
+}
+
+/* ---------- Idea / CTA card ---------- */
+.idea-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  height: 100%;
+  min-height: 240px;
+  padding: 1.5rem;
+  border-radius: 20px;
+  border: 1.5px dashed rgba(28, 24, 19, 0.18);
+  background: transparent;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.3s ease, background 0.3s ease,
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.idea-card:hover {
+  border-color: rgba(180, 84, 58, 0.5);
+  background: rgba(255, 252, 245, 0.4);
+  transform: translateY(-5px);
+}
+
+/* ---------- Buttons & links ---------- */
+.arrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  transition: gap 0.3s ease, color 0.25s ease;
+}
+
+.arrow-link:hover {
+  gap: 0.8rem;
+  color: var(--accent);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.6rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  background: #2e2620;
+  box-shadow: 0 14px 34px -12px rgba(28, 24, 19, 0.45);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 24, 19, 0.18);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  background: rgba(255, 252, 245, 0.4);
+  transition: border-color 0.3s ease, background 0.3s ease,
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-ghost:hover {
+  border-color: rgba(28, 24, 19, 0.4);
+  background: rgba(255, 252, 245, 0.75);
+  transform: translateY(-2px);
+}
+
+/* ---------- Entrance animations ---------- */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -136,21 +545,21 @@ body {
 }
 
 .fade-in-up {
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
 }
 
-.delay-1 { animation-delay: 0.1s; }
-.delay-2 { animation-delay: 0.2s; }
-.delay-3 { animation-delay: 0.3s; }
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.15s; }
+.delay-3 { animation-delay: 0.28s; }
 .delay-4 { animation-delay: 0.4s; }
-.delay-5 { animation-delay: 0.5s; }
+.delay-5 { animation-delay: 0.55s; }
 
-/* Section transitions */
 .section-enter {
   opacity: 0;
   transform: translateY(32px);
-  transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .section-enter.visible {
@@ -158,26 +567,20 @@ body {
   transform: translateY(0);
 }
 
-/* Arrow link */
-.arrow-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: var(--foreground);
-  text-decoration: none;
-  transition: gap 0.3s ease;
-}
-
-.arrow-link:hover {
-  gap: 0.75rem;
-}
-
-.arrow-link svg {
-  transition: transform 0.3s ease;
-}
-
-.arrow-link:hover svg {
-  transform: translateX(2px);
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up {
+    animation: none;
+    opacity: 1;
+  }
+  .section-enter {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .scroll-indicator {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }

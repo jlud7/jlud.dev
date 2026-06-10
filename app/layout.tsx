@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,21 +12,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  weight: "400",
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "JLUD — Developer",
+  title: "James Luddy — JLUD.dev",
   description:
-    "Personal developer portfolio of JLUD. Building things for the web.",
+    "Games, tools & curiosities for the web. Portfolio of James Luddy: multiplayer card games, color science, chess scorekeeping, LED matrices, and more.",
   openGraph: {
-    title: "JLUD — Developer",
-    description: "Personal developer portfolio of JLUD.",
+    title: "James Luddy — JLUD.dev",
+    description: "Games, tools & curiosities for the web.",
     url: "https://jlud.dev",
     siteName: "JLUD.dev",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "JLUD — Developer",
-    description: "Personal developer portfolio of JLUD.",
+    title: "James Luddy — JLUD.dev",
+    description: "Games, tools & curiosities for the web.",
   },
 };
 
@@ -38,7 +45,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
