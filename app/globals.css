@@ -451,11 +451,31 @@ body {
   white-space: nowrap;
 }
 
+/* card footer: links pinned to the bottom, set off by a hairline */
+.card-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.75rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--line);
+}
+
+.card-note {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
 /* card action links */
 .card-link {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  padding: 0.35rem 0;
   font-family: var(--font-mono), monospace;
   font-size: 0.7rem;
   letter-spacing: 0.12em;
@@ -486,7 +506,7 @@ body {
   justify-content: flex-end;
   height: 100%;
   min-height: 240px;
-  padding: 1.5rem;
+  padding: 1.75rem;
   border-radius: 20px;
   border: 1.5px dashed rgba(28, 24, 19, 0.18);
   background: transparent;

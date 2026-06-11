@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Sprouting Stories: a sprout growing from an open storybook">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#faf4e6"/>
+      <stop offset="1" stop-color="#efe7d6"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#e8b95e" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#e8b95e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffcf5"/>
+      <stop offset="1" stop-color="#f6efe0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="500" fill="url(#paper)"/>
+  <circle cx="650" cy="95" r="170" fill="url(#sun)"/>
+
+  <!-- sparkles -->
+  <g fill="#b4543a">
+    <path d="M170 120 l4 12 12 4 -12 4 -4 12 -4 -12 -12 -4 12 -4 z" opacity="0.8"/>
+    <path d="M615 215 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3 z" opacity="0.6"/>
+    <path d="M255 60 l2.5 7.5 7.5 2.5 -7.5 2.5 -2.5 7.5 -2.5 -7.5 -7.5 -2.5 7.5 -2.5 z" opacity="0.5"/>
+  </g>
+
+  <!-- title -->
+  <text x="400" y="120" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="58" fill="#1c1813">Sprouting <tspan fill="#3f5a3c">Stories</tspan></text>
+  <text x="400" y="158" text-anchor="middle" font-family="ui-monospace, 'Courier New', monospace" font-size="14" letter-spacing="4" fill="#a89d8d">AI-ILLUSTRATED STORYBOOKS · EST. 2024</text>
+
+  <!-- sprout growing from the book -->
+  <g>
+    <path d="M400 368 C 398 330 404 300 400 258" stroke="#3f5a3c" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M401 295 C 370 290 352 268 350 240 C 382 244 400 264 401 295 Z" fill="#3f5a3c"/>
+    <path d="M401 270 C 432 264 450 240 451 212 C 419 217 402 238 401 270 Z" fill="#557a51"/>
+    <circle cx="400" cy="252" r="9" fill="#b4543a"/>
+  </g>
+
+  <!-- open book -->
+  <g>
+    <path d="M150 380 C 240 350 340 348 400 372 C 460 348 560 350 650 380 L 650 442 C 560 414 460 412 400 436 C 340 412 240 414 150 442 Z" fill="#1c1813" opacity="0.08" transform="translate(0 14)"/>
+    <path d="M150 372 C 240 342 340 340 400 364 C 460 340 560 342 650 372 L 650 436 C 560 408 460 406 400 430 C 340 406 240 408 150 436 Z" fill="url(#page)" stroke="#1c1813" stroke-opacity="0.18" stroke-width="2"/>
+    <path d="M400 364 L 400 430" stroke="#1c1813" stroke-opacity="0.18" stroke-width="2"/>
+    <!-- faint text lines on the pages -->
+    <g stroke="#1c1813" stroke-opacity="0.16" stroke-width="3" stroke-linecap="round">
+      <path d="M195 382 C 250 366 320 363 372 376"/>
+      <path d="M195 398 C 250 382 320 379 372 392"/>
+      <path d="M195 414 C 240 400 290 397 340 405"/>
+      <path d="M428 376 C 480 363 550 366 605 382"/>
+      <path d="M428 392 C 480 379 550 382 605 398"/>
+      <path d="M460 406 C 505 398 555 401 605 414"/>
+    </g>
+  </g>
+</svg>
