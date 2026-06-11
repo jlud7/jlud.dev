@@ -53,6 +53,18 @@ const proudOf: Project[] = [
   },
 ];
 
+const sproutingStories: Project = {
+  title: "Sprouting Stories",
+  year: "2024",
+  kind: "Product · The first one",
+  description:
+    "AI-illustrated children's storybooks, grown from a single idea. This was my first vibe-coded project, two-plus years ago, and the one where I learned how models think, how prompts fail, and how much I love building this way. Everything else on this page sprouted from it.",
+  tags: ["AI storybooks", "JavaScript", "Swift"],
+  image: "/previews/sprouting-stories.svg",
+  domain: "sprouting stories · est. 2024",
+  note: "Where it all started · now an iOS app",
+};
+
 const withFire: Project = {
   title: "With Fire",
   year: "2026",
@@ -183,11 +195,11 @@ export default function Home() {
 
       {/* Nav */}
       <nav className="nav-bar">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-5 sm:px-6 h-14 flex items-center justify-between">
           <a href="#" className="font-mono text-sm font-bold tracking-widest">
             JLUD<span style={{ color: "var(--accent)" }}>.</span>DEV
           </a>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5 sm:gap-7">
             <a href="#work" className="nav-link">
               Work
             </a>
@@ -211,14 +223,14 @@ export default function Home() {
 
       {/* Hero */}
       <section className="hero">
-        <div className="max-w-5xl mx-auto w-full px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto w-full px-5 sm:px-6">
           <p
             className="font-mono text-xs tracking-[0.25em] uppercase mb-6 fade-in-up delay-1"
             style={{ color: "var(--muted)" }}
           >
             James Luddy · developer
           </p>
-          <h1 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.02] mb-8 fade-in-up delay-2">
+          <h1 className="text-[2.75rem] sm:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] sm:leading-[1.02] mb-7 sm:mb-8 fade-in-up delay-2">
             Software with a<br />
             little{" "}
             <span className="serif-accent" style={{ color: "var(--accent)" }}>
@@ -227,12 +239,12 @@ export default function Home() {
             in it.
           </h1>
           <p
-            className="text-lg sm:text-xl leading-relaxed max-w-xl mb-10 fade-in-up delay-3"
+            className="text-[1.0625rem] sm:text-xl leading-[1.75] max-w-xl mb-10 fade-in-up delay-3"
             style={{ color: "var(--muted)" }}
           >
             I build games, tools, and odd little machines for the web, and
             I&apos;ve shipped a philosophy essay every single week for two-plus
-            years. Eleven projects below. All real, all alive.
+            years. Twelve projects below. All real, all alive.
           </p>
           <div className="fade-in-up delay-4 flex flex-wrap gap-4 items-center">
             <a href="#work" className="btn-primary">
@@ -295,9 +307,9 @@ export default function Home() {
 
       {/* Things I'm proud of */}
       <section id="work" className="relative z-10 py-24 sm:py-36">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-5 sm:px-6">
           <ScrollReveal>
-            <div className="mb-16">
+            <div className="mb-12 sm:mb-16">
               <p
                 className="font-mono text-xs tracking-[0.25em] uppercase mb-3"
                 style={{ color: "var(--muted)" }}
@@ -314,7 +326,7 @@ export default function Home() {
             </div>
           </ScrollReveal>
 
-          <div className="grid gap-7 sm:grid-cols-2">
+          <div className="grid gap-6 sm:gap-7 sm:grid-cols-2">
             {/* Logic & Levity, first and widest */}
             <ScrollReveal className="sm:col-span-2">
               <a
@@ -360,14 +372,14 @@ export default function Home() {
                       Levity
                     </h3>
                     <p
-                      className="text-sm leading-[1.8] mb-8"
+                      className="text-sm leading-[1.8] mb-6"
                       style={{ color: "var(--muted)" }}
                     >
                       Bite-sized philosophical explorations, published weekly.
                       Every Sunday, without fail, for over two years now. The
                       streak is the thing I&apos;m proudest of.
                     </p>
-                    <div className="flex gap-12 mb-8">
+                    <div className="flex gap-10 sm:gap-12 mb-6">
                       <div>
                         <p className="text-3xl font-bold tracking-tight mb-1">
                           100+
@@ -391,9 +403,11 @@ export default function Home() {
                         </p>
                       </div>
                     </div>
-                    <span className="card-link">
-                      Read on Substack <ExternalIcon />
-                    </span>
+                    <div className="card-foot">
+                      <span className="card-link">
+                        Read on Substack <ExternalIcon />
+                      </span>
+                    </div>
                   </div>
                 </div>
               </a>
@@ -410,6 +424,11 @@ export default function Home() {
               </ScrollReveal>
             ))}
 
+            {/* Sprouting Stories, the sentimental one, full width */}
+            <ScrollReveal className="sm:col-span-2">
+              <ProjectCard project={sproutingStories} wide flip />
+            </ScrollReveal>
+
             {/* With Fire closes the section, full width */}
             <ScrollReveal className="sm:col-span-2">
               <ProjectCard project={withFire} wide />
@@ -420,9 +439,9 @@ export default function Home() {
 
       {/* Works in progress */}
       <section id="lab" className="relative z-10 pb-24 sm:pb-36">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-5 sm:px-6">
           <ScrollReveal>
-            <div className="mb-16">
+            <div className="mb-12 sm:mb-16">
               <p
                 className="font-mono text-xs tracking-[0.25em] uppercase mb-3"
                 style={{ color: "var(--muted)" }}
@@ -478,7 +497,7 @@ export default function Home() {
 
       {/* About */}
       <section id="about" className="relative z-10 pb-28 sm:pb-40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-5 sm:px-6">
           <ScrollReveal>
             <div
               className="rounded-3xl border p-9 sm:p-16"
@@ -585,7 +604,7 @@ export default function Home() {
         className="relative z-10 py-16 border-t"
         style={{ borderColor: "var(--line)" }}
       >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto px-5 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-mono text-xs" style={{ color: "var(--faint)" }}>
             © {new Date().getFullYear()} James Luddy
           </p>

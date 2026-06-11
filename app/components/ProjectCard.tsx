@@ -12,6 +12,7 @@ export type Project = {
   domain: string;
   live?: string;
   github?: string;
+  note?: string;
 };
 
 function ExternalIcon({ size = 11 }: { size?: number }) {
@@ -45,9 +46,10 @@ function PreviewChrome({ domain }: { domain: string }) {
   );
 }
 
-function CardLinks({ project }: { project: Project }) {
+function CardFoot({ project }: { project: Project }) {
+  if (!project.live && !project.github && !project.note) return null;
   return (
-    <div className="mt-auto flex items-center gap-6 pt-1">
+    <div className="card-foot">
       {project.live && (
         <a
           href={project.live}
@@ -68,6 +70,7 @@ function CardLinks({ project }: { project: Project }) {
           GitHub <ExternalIcon />
         </a>
       )}
+      {project.note && <span className="card-note">{project.note}</span>}
     </div>
   );
 }
@@ -76,10 +79,12 @@ export default function ProjectCard({
   project,
   compact = false,
   wide = false,
+  flip = false,
 }: {
   project: Project;
   compact?: boolean;
   wide?: boolean;
+  flip?: boolean;
 }) {
   const onMouseMove = (e: MouseEvent<HTMLElement>) => {
     const el = e.currentTarget;
@@ -88,23 +93,31 @@ export default function ProjectCard({
     el.style.setProperty("--my", `${e.clientY - rect.top}px`);
   };
 
-  const primaryHref = project.live ?? project.github ?? "#";
+  const primaryHref = project.live ?? project.github;
 
   const cardProps = {
     onMouseMove,
-    "data-cursor": project.live ? "view" : "code",
-    onClick: (e: MouseEvent<HTMLElement>) => {
-      // make the whole card clickable without nesting anchors
-      if ((e.target as Element).closest("a")) return;
-      window.open(primaryHref, "_blank", "noopener,noreferrer");
-    },
+    ...(primaryHref
+      ? {
+          "data-cursor": project.live ? "view" : "code",
+          onClick: (e: MouseEvent<HTMLElement>) => {
+            // make the whole card clickable without nesting anchors
+            if ((e.target as Element).closest("a")) return;
+            window.open(primaryHref, "_blank", "noopener,noreferrer");
+          },
+        }
+      : {}),
   };
 
   if (wide) {
     return (
       <article className="project-card wide" {...cardProps}>
         <div className="grid md:grid-cols-2">
-          <div className="preview-frame md:!m-2.5 flex flex-col">
+          <div
+            className={`preview-frame md:!m-2.5 flex flex-col ${
+              flip ? "md:order-2" : ""
+            }`}
+          >
             <PreviewChrome domain={project.domain} />
             <div className="preview-fill">
               <img
@@ -125,19 +138,19 @@ export default function ProjectCard({
               {project.title}
             </h3>
             <p
-              className="text-sm leading-[1.8] mb-7"
+              className="text-sm leading-[1.8] mb-6"
               style={{ color: "var(--muted)" }}
             >
               {project.description}
             </p>
-            <div className="flex flex-wrap gap-2 mb-8">
+            <div className="flex flex-wrap gap-2 mb-6">
               {project.tags.map((tag) => (
                 <span key={tag} className="tag">
                   {tag}
                 </span>
               ))}
             </div>
-            <CardLinks project={project} />
+            <CardFoot project={project} />
           </div>
         </div>
       </article>
@@ -158,9 +171,11 @@ export default function ProjectCard({
         </div>
       </div>
 
-      <div className={`flex flex-col flex-1 ${compact ? "p-6" : "p-7 sm:p-8"}`}>
+      <div
+        className={`flex flex-col flex-1 ${compact ? "p-7 sm:p-6" : "p-7 sm:p-8"}`}
+      >
         <p
-          className="font-mono text-[0.65rem] tracking-widest uppercase mb-2.5"
+          className="font-mono text-[0.65rem] tracking-widest uppercase mb-3"
           style={{ color: "var(--faint)" }}
         >
           {project.kind} · {project.year}
@@ -174,13 +189,15 @@ export default function ProjectCard({
         </h3>
 
         <p
-          className={`leading-[1.8] mb-6 ${compact ? "text-[0.8rem]" : "text-sm"}`}
+          className={`leading-[1.75] mb-5 ${
+            compact ? "text-[0.8125rem]" : "text-sm"
+          }`}
           style={{ color: "var(--muted)" }}
         >
           {project.description}
         </p>
 
-        <div className="flex flex-wrap gap-2 mb-7">
+        <div className="flex flex-wrap gap-2 mb-6">
           {project.tags.map((tag) => (
             <span key={tag} className="tag">
               {tag}
@@ -188,7 +205,7 @@ export default function ProjectCard({
           ))}
         </div>
 
-        <CardLinks project={project} />
+        <CardFoot project={project} />
       </div>
     </article>
   );
