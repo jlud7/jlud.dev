@@ -196,9 +196,21 @@ export default function Home() {
       {/* Nav */}
       <nav className="nav-bar">
         <div className="max-w-5xl mx-auto px-5 sm:px-6 h-14 flex items-center justify-between">
-          <a href="#" className="font-mono text-sm font-bold tracking-widest">
-            JLUD<span style={{ color: "var(--accent)" }}>.</span>DEV
-          </a>
+          <div className="flex items-baseline gap-2.5">
+            <a
+              href="#"
+              className="font-mono text-sm font-bold tracking-widest"
+              aria-label="JLUD.dev, operated by JLUD Designs, LLC"
+            >
+              JLUD<span style={{ color: "var(--accent)" }}>.</span>DEV
+            </a>
+            <span
+              className="hidden md:inline font-mono text-[0.65rem] tracking-wider"
+              style={{ color: "var(--faint)" }}
+            >
+              JLUD Designs, LLC
+            </span>
+          </div>
           <div className="flex items-center gap-5 sm:gap-7">
             <a href="#work" className="nav-link">
               Work
@@ -513,7 +525,7 @@ export default function Home() {
               >
                 03 · About
               </p>
-              <p className="text-2xl sm:text-3xl leading-snug tracking-tight font-medium max-w-3xl mb-10">
+              <p className="text-2xl sm:text-3xl leading-snug tracking-tight font-medium max-w-3xl mb-6">
                 I&apos;m James. Mostly{" "}
                 <span
                   className="serif-accent"
@@ -527,6 +539,16 @@ export default function Home() {
                   smile
                 </span>
                 , it ships.
+              </p>
+              <p
+                className="text-sm leading-[1.8] max-w-xl mb-10"
+                style={{ color: "var(--muted)" }}
+              >
+                It&apos;s all built and shipped under{" "}
+                <span className="font-medium" style={{ color: "var(--ink)" }}>
+                  JLUD Designs, LLC
+                </span>
+                , the studio behind this site.
               </p>
               <div className="flex flex-wrap gap-8 items-center">
                 <a href="mailto:hello@jlud.dev" className="arrow-link text-sm">
@@ -606,7 +628,7 @@ export default function Home() {
       >
         <div className="max-w-5xl mx-auto px-5 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-mono text-xs" style={{ color: "var(--faint)" }}>
-            © {new Date().getFullYear()} James Luddy
+            © {new Date().getFullYear()} JLUD Designs, LLC
           </p>
           <p className="font-mono text-xs" style={{ color: "var(--faint)" }}>
             palm shadows rendered live in WebGL ✺ no video files were harmed
