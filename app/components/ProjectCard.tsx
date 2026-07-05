@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent } from "react";
+import { MouseEvent, useEffect, useRef } from "react";
 
 export type Project = {
   title: string;
@@ -87,20 +87,40 @@ export default function ProjectCard({
   wide?: boolean;
   flip?: boolean;
 }) {
-  const onMouseMove = (e: MouseEvent<HTMLElement>) => {
-    const el = e.currentTarget;
-    const rect = el.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    el.style.setProperty("--mx", `${x}px`);
-    el.style.setProperty("--my", `${y}px`);
+  // latest pointer position, written per event, consumed once per frame
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const targetRef = useRef<HTMLElement | null>(null);
+  const frameRef = useRef<number | null>(null);
 
-    // gentle 3D tilt, rotating away from the cursor like a plate being pressed
-    const px = x / rect.width - 0.5;
-    const py = y / rect.height - 0.5;
-    const maxTilt = 1.6;
-    el.style.setProperty("--ry", `${(px * maxTilt * 2).toFixed(2)}deg`);
-    el.style.setProperty("--rx", `${(-py * maxTilt * 2).toFixed(2)}deg`);
+  useEffect(() => {
+    return () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    };
+  }, []);
+
+  const onMouseMove = (e: MouseEvent<HTMLElement>) => {
+    pointerRef.current.x = e.clientX;
+    pointerRef.current.y = e.clientY;
+    targetRef.current = e.currentTarget;
+    if (frameRef.current !== null) return;
+
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const el = targetRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = pointerRef.current.x - rect.left;
+      const y = pointerRef.current.y - rect.top;
+      el.style.setProperty("--mx", `${x}px`);
+      el.style.setProperty("--my", `${y}px`);
+
+      // gentle 3D tilt, rotating away from the cursor like a plate being pressed
+      const px = x / rect.width - 0.5;
+      const py = y / rect.height - 0.5;
+      const maxTilt = 1.6;
+      el.style.setProperty("--ry", `${(px * maxTilt * 2).toFixed(2)}deg`);
+      el.style.setProperty("--rx", `${(-py * maxTilt * 2).toFixed(2)}deg`);
+    });
   };
 
   const primaryHref = project.live ?? project.github;

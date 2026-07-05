@@ -374,22 +374,33 @@ body {
     rotateY(var(--ry, 0deg)) translateY(-4px);
   border-color: rgba(28, 24, 19, 0.16);
   box-shadow: 0 18px 40px -18px rgba(28, 24, 19, 0.28);
-  transition: transform 0.08s linear, box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+  transition: transform 0s linear, box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.45s ease;
 }
 
-/* spotlight that follows the cursor */
+/* spotlight that follows the cursor
+   a fixed-size circle moved with a compositor-only transform, so mousemove
+   never repaints the gradient; the card's overflow hidden clips it */
 .project-card::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 840px;
+  height: 840px;
+  border-radius: 50%;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s ease;
   background: radial-gradient(
-    420px circle at var(--mx, 50%) var(--my, 50%),
+    420px circle,
     rgba(255, 244, 214, 0.55),
     transparent 65%
+  );
+  transform: translate3d(
+    calc(var(--mx, -9999px) - 420px),
+    calc(var(--my, -9999px) - 420px),
+    0
   );
   mix-blend-mode: soft-light;
 }
