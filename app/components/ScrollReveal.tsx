@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, ReactNode } from "react";
+import { useEffect, useRef, ReactNode, CSSProperties } from "react";
 
 export default function ScrollReveal({
   children,
   className = "",
+  style,
 }: {
   children: ReactNode;
   className?: string;
+  style?: CSSProperties;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,7 +32,7 @@ export default function ScrollReveal({
   }, []);
 
   return (
-    <div ref={ref} className={`section-enter ${className}`}>
+    <div ref={ref} className={`section-enter ${className}`} style={style}>
       {children}
     </div>
   );

@@ -2,6 +2,8 @@ import ShaderBackground from "./components/ShaderBackground";
 import Cursor from "./components/Cursor";
 import ScrollReveal from "./components/ScrollReveal";
 import ProjectCard, { Project } from "./components/ProjectCard";
+import Nav from "./components/Nav";
+import Magnetic from "./components/Magnetic";
 
 const proudOf: Project[] = [
   {
@@ -9,10 +11,9 @@ const proudOf: Project[] = [
     year: "2026",
     kind: "Product",
     description:
-      "Twelve-season menswear color analysis. The analyzer reads a few photos and places you in a season; a curated catalog of solid-color basics filters to your palette. ΔE2000 color math, built in Miami.",
+      "Twelve-season color analysis for menswear. It reads a few photos, places you in a season, and filters a catalog of solid-color basics down to what actually suits you. ΔE2000 color math, built in Miami.",
     tags: ["Color science", "Vanilla JS", "Vercel", "Supabase"],
     image: "/previews/garamond-goods.webp",
-    domain: "garamond-goods.vercel.app",
     live: "https://garamond-goods.vercel.app",
     github: "https://github.com/jlud7/GaramondGoods",
   },
@@ -24,7 +25,6 @@ const proudOf: Project[] = [
       "Battleship, if it had four layers: space, sky, sea, and underwater. Strategic AI, treasure power-ups, local two-player, and its own domain.",
     tags: ["JavaScript", "Canvas", "Game AI"],
     image: "/previews/warzones.webp",
-    domain: "warzones.io",
     live: "https://warzones.io",
     github: "https://github.com/jlud7/WarZones",
   },
@@ -36,7 +36,6 @@ const proudOf: Project[] = [
       "A dual-world, 1-bit puzzle game about two halves of one figure. 81 rooms, 15 shards, two worlds walked at once, and nothing in it explains itself. It also runs on a real e-ink handheld.",
     tags: ["JavaScript", "Pixel art", "E-ink port"],
     image: "/previews/diptych.webp",
-    domain: "jlud7.github.io/Diptych",
     live: "https://jlud7.github.io/Diptych/",
     github: "https://github.com/jlud7/Diptych",
   },
@@ -45,10 +44,9 @@ const proudOf: Project[] = [
     year: "2026",
     kind: "Game",
     description:
-      "A browser action RPG where you guide lost souls to their final rest. Quests, crafting, farming, leveling, and the occasional sword swing, all in a cozy little overworld.",
+      "A browser action RPG about guiding lost souls to their final rest. Quests, crafting, farming, leveling, and the occasional sword swing.",
     tags: ["JavaScript", "Game design", "Firebase"],
     image: "/previews/soul-searcher.webp",
-    domain: "soulsearcher-ai.web.app",
     live: "https://soulsearcher-ai.web.app",
   },
 ];
@@ -58,11 +56,10 @@ const sproutingStories: Project = {
   year: "2024",
   kind: "Product · The first one",
   description:
-    "AI-illustrated children's storybooks, grown from a single idea. This was my first vibe-coded project, two-plus years ago, and the one where I learned how models think, how prompts fail, and how much I love building this way. Everything else on this page sprouted from it.",
+    "AI-illustrated children's storybooks, and my first vibe-coded project. Two years ago this taught me how models think and how prompts fall apart. Everything else on this page sprouted from it.",
   tags: ["AI storybooks", "JavaScript", "Swift"],
   image: "/previews/sprouting-stories.svg",
-  domain: "sprouting stories · est. 2024",
-  note: "Where it all started · now an iOS app",
+  note: "Now an iOS app",
 };
 
 const withFire: Project = {
@@ -70,10 +67,9 @@ const withFire: Project = {
   year: "2026",
   kind: "Game · In playtest",
   description:
-    "A Skull-family bluffing card game of flowers and flames. Every card you place is a Flower, except the one Fire in your hand. Real online multiplayer with shareable room keys, or solo against four AI opponents. The server is authoritative, so a modified client can never peek at your cards.",
+    "A Skull-family bluffing card game of flowers and flames. Every card you place is a Flower, except the one Fire in your hand. Online multiplayer with shareable room keys, or solo against four AI opponents. The server is authoritative, so a modified client can never peek at your cards.",
   tags: ["TypeScript", "React", "WebSockets", "Node"],
   image: "/previews/withfire.webp",
-  domain: "localhost:3001 · unreleased",
   github: "https://github.com/jlud7/withfire",
 };
 
@@ -83,10 +79,9 @@ const cooking: Project[] = [
     year: "2025",
     kind: "Product",
     description:
-      "An AI essay-editing companion that cuts, refines, and de-em-dashes your prose, Hemingway style. Multi-user with Google OAuth, real-time sync across devices, powered by Claude.",
+      "An AI editor that cuts your prose down Hemingway style, em-dashes first. Google sign-in, real-time sync, Claude under the hood.",
     tags: ["React", "Supabase", "Claude API"],
     image: "/previews/hemingways-desk.webp",
-    domain: "on-essays.vercel.app",
     live: "https://on-essays.vercel.app",
     github: "https://github.com/jlud7/OnEssays",
   },
@@ -95,10 +90,9 @@ const cooking: Project[] = [
     year: "2026",
     kind: "Tool",
     description:
-      "Play chess over the board while your phone keeps score. Set it above the board, tap once per move, and it writes a clean PGN. An openings coach is next on the roadmap.",
+      "Play chess over the board while your phone keeps score. Set it above the board, tap once per move, and it writes a clean PGN. An openings coach comes next.",
     tags: ["Next.js", "TypeScript", "Computer vision"],
     image: "/previews/chesspar.webp",
-    domain: "jlud7.github.io/Chesspar",
     live: "https://jlud7.github.io/Chesspar/",
     github: "https://github.com/jlud7/Chesspar",
   },
@@ -110,7 +104,6 @@ const cooking: Project[] = [
       "A falling-note piano visualizer playing the Zelda title theme, with real-time Web Audio synthesis and a playable three-octave keyboard.",
     tags: ["Web Audio", "Canvas"],
     image: "/previews/keyvizpiano.webp",
-    domain: "jlud7.github.io/KeyVizPiano",
     live: "https://jlud7.github.io/KeyVizPiano/",
     github: "https://github.com/jlud7/KeyVizPiano",
   },
@@ -122,7 +115,6 @@ const cooking: Project[] = [
       "A digital split-flap display à la Vestaboard. Compose a message, copy the display link, and throw it up on a TV.",
     tags: ["React", "Vite"],
     image: "/previews/flippybord.webp",
-    domain: "jlud7.github.io/flippybord",
     live: "https://jlud7.github.io/flippybord/",
     github: "https://github.com/jlud7/flippybord",
   },
@@ -134,7 +126,6 @@ const cooking: Project[] = [
       "A full-stack LED matrix system: ESP32-S3 firmware with DMA-driven effects, a Python render service, and a React dashboard for a 64×32 HUB75 panel.",
     tags: ["ESP32", "C++", "FastAPI", "React"],
     image: "/previews/goddard-display.svg",
-    domain: "64×32 HUB75 · ESP32-S3",
     github: "https://github.com/jlud7/Goddard_Display_1",
   },
 ];
@@ -194,44 +185,7 @@ export default function Home() {
       <Cursor />
 
       {/* Nav */}
-      <nav className="nav-bar">
-        <div className="max-w-5xl mx-auto px-5 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-baseline gap-2.5">
-            <a
-              href="#"
-              className="font-mono text-sm font-bold tracking-widest"
-              aria-label="JLUD.dev, operated by JLUD Designs, LLC"
-            >
-              JLUD<span style={{ color: "var(--accent)" }}>.</span>DEV
-            </a>
-            <span
-              className="hidden md:inline font-mono text-[0.65rem] tracking-wider"
-              style={{ color: "var(--faint)" }}
-            >
-              JLUD Designs, LLC
-            </span>
-          </div>
-          <div className="flex items-center gap-5 sm:gap-7">
-            <a href="#work" className="nav-link">
-              Work
-            </a>
-            <a href="#writing" className="nav-link">
-              Writing
-            </a>
-            <a href="#about" className="nav-link">
-              About
-            </a>
-            <a
-              href="https://github.com/jlud7"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nav-link"
-            >
-              GitHub
-            </a>
-          </div>
-        </div>
-      </nav>
+      <Nav />
 
       {/* Hero */}
       <section className="hero">
@@ -242,7 +196,7 @@ export default function Home() {
           >
             James Luddy · developer
           </p>
-          <h1 className="text-[2.75rem] sm:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] sm:leading-[1.02] mb-7 sm:mb-8 fade-in-up delay-2">
+          <h1 className="text-[2.75rem] sm:text-7xl lg:text-8xl font-bold tracking-[-0.02em] leading-[1.05] sm:leading-[1.02] mb-7 sm:mb-8 fade-in-up delay-2">
             Software with a<br />
             little{" "}
             <span className="serif-accent" style={{ color: "var(--accent)" }}>
@@ -251,40 +205,44 @@ export default function Home() {
             in it.
           </h1>
           <p
-            className="text-[1.0625rem] sm:text-xl leading-[1.75] max-w-xl mb-10 fade-in-up delay-3"
+            className="text-[1.0625rem] sm:text-xl leading-[1.75] max-w-[62ch] mb-10 fade-in-up delay-3"
             style={{ color: "var(--muted)" }}
           >
-            I build games, tools, and odd little machines for the web, and
-            I&apos;ve shipped a philosophy essay every single week for two-plus
-            years. Twelve projects below. All real, all alive.
+            I make games, tools, and whatever else sounds fun that week. Twelve
+            projects live below, and a philosophy essay has gone out every
+            Sunday for two years straight.
           </p>
           <div className="fade-in-up delay-4 flex flex-wrap gap-4 items-center">
-            <a href="#work" className="btn-primary">
-              See the work
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 14 14"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+            <Magnetic strength={0.3}>
+              <a href="#work" className="btn-primary">
+                See the work
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M7 1V13M7 13L1 7M7 13L13 7"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+            </Magnetic>
+            <Magnetic strength={0.3}>
+              <a
+                href="https://github.com/jlud7"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost"
               >
-                <path
-                  d="M7 1V13M7 13L1 7M7 13L13 7"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </a>
-            <a
-              href="https://github.com/jlud7"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost"
-            >
-              @jlud7 on GitHub
-            </a>
+                @jlud7 on GitHub
+              </a>
+            </Magnetic>
           </div>
         </div>
 
@@ -328,7 +286,7 @@ export default function Home() {
               >
                 01 · Things I&apos;m proud of
               </p>
-              <h2 className="text-3xl sm:text-5xl font-bold tracking-tight">
+              <h2 className="text-3xl sm:text-5xl font-bold tracking-[-0.02em]">
                 The{" "}
                 <span className="serif-accent" style={{ color: "var(--palm)" }}>
                   good
@@ -338,7 +296,7 @@ export default function Home() {
             </div>
           </ScrollReveal>
 
-          <div className="grid gap-6 sm:gap-7 sm:grid-cols-2">
+          <div className="grid gap-7 sm:gap-8 sm:grid-cols-2">
             {/* Logic & Levity, first and widest */}
             <ScrollReveal className="sm:col-span-2">
               <a
@@ -351,20 +309,12 @@ export default function Home() {
                 style={{ display: "block", scrollMarginTop: "5rem" }}
               >
                 <div className="grid md:grid-cols-2">
-                  <div className="preview-frame md:!m-2.5 flex flex-col">
-                    <div className="preview-chrome">
-                      <span className="dot" />
-                      <span className="dot" />
-                      <span className="dot" />
-                      <span className="domain">logicandlevity.com</span>
-                    </div>
-                    <div className="preview-fill">
-                      <img
-                        src="/previews/logic-and-levity.webp"
-                        alt="Preview of Logic & Levity"
-                        loading="lazy"
-                      />
-                    </div>
+                  <div className="preview-fill">
+                    <img
+                      src="/previews/logic-and-levity.webp"
+                      alt="Preview of Logic & Levity"
+                      loading="lazy"
+                    />
                   </div>
                   <div className="p-7 sm:p-10 flex flex-col justify-center">
                     <p
@@ -373,7 +323,7 @@ export default function Home() {
                     >
                       Substack · Philosophy, weekly
                     </p>
-                    <h3 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
+                    <h3 className="text-3xl sm:text-4xl font-bold tracking-[-0.02em] mb-4">
                       Logic{" "}
                       <span
                         className="serif-accent"
@@ -387,9 +337,9 @@ export default function Home() {
                       className="text-sm leading-[1.8] mb-6"
                       style={{ color: "var(--muted)" }}
                     >
-                      Bite-sized philosophical explorations, published weekly.
-                      Every Sunday, without fail, for over two years now. The
-                      streak is the thing I&apos;m proudest of.
+                      Short philosophy essays that try not to take themselves
+                      too seriously. One every Sunday for over two years now.
+                      The streak is the thing I&apos;m proudest of.
                     </p>
                     <div className="flex gap-10 sm:gap-12 mb-6">
                       <div>
@@ -426,13 +376,12 @@ export default function Home() {
             </ScrollReveal>
 
             {proudOf.map((project, i) => (
-              <ScrollReveal key={project.title}>
-                <div
-                  style={{ transitionDelay: `${(i % 2) * 90}ms` }}
-                  className="h-full"
-                >
-                  <ProjectCard project={project} />
-                </div>
+              <ScrollReveal
+                key={project.title}
+                className="h-full"
+                style={{ transitionDelay: `${(i % 2) * 90}ms` }}
+              >
+                <ProjectCard project={project} />
               </ScrollReveal>
             ))}
 
@@ -460,7 +409,7 @@ export default function Home() {
               >
                 02 · Works in progress
               </p>
-              <h2 className="text-3xl sm:text-5xl font-bold tracking-tight">
+              <h2 className="text-3xl sm:text-5xl font-bold tracking-[-0.02em]">
                 Still{" "}
                 <span
                   className="serif-accent"
@@ -472,23 +421,18 @@ export default function Home() {
             </div>
           </ScrollReveal>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
             {cooking.map((project, i) => (
-              <ScrollReveal key={project.title}>
-                <div
-                  style={{ transitionDelay: `${(i % 3) * 80}ms` }}
-                  className="h-full"
-                >
-                  <ProjectCard project={project} compact />
-                </div>
+              <ScrollReveal
+                key={project.title}
+                className="h-full"
+                style={{ transitionDelay: `${(i % 3) * 80}ms` }}
+              >
+                <ProjectCard project={project} compact />
               </ScrollReveal>
             ))}
-            <ScrollReveal>
-              <a
-                href="mailto:hello@jlud.dev"
-                className="idea-card"
-                style={{ transitionDelay: "160ms" }}
-              >
+            <ScrollReveal style={{ transitionDelay: "160ms" }}>
+              <a href="mailto:hello@jlud.dev" className="idea-card">
                 <span
                   className="font-mono text-[0.65rem] tracking-widest uppercase mb-3"
                   style={{ color: "var(--faint)" }}
@@ -499,7 +443,7 @@ export default function Home() {
                   Your idea here<span style={{ color: "var(--accent)" }}>?</span>
                 </span>
                 <span className="text-sm" style={{ color: "var(--muted)" }}>
-                  Got something fun to build, say hi.
+                  Got something fun to build? Say hi.
                 </span>
               </a>
             </ScrollReveal>
@@ -508,11 +452,11 @@ export default function Home() {
       </section>
 
       {/* About */}
-      <section id="about" className="relative z-10 pb-28 sm:pb-40">
+      <section id="about" className="relative z-10 pb-24 sm:pb-36">
         <div className="max-w-5xl mx-auto px-5 sm:px-6">
           <ScrollReveal>
             <div
-              className="rounded-3xl border p-9 sm:p-16"
+              className="rounded-[20px] border p-9 sm:p-16"
               style={{
                 background: "var(--card-bg)",
                 borderColor: "var(--card-border)",
@@ -525,7 +469,7 @@ export default function Home() {
               >
                 03 · About
               </p>
-              <p className="text-2xl sm:text-3xl leading-snug tracking-tight font-medium max-w-3xl mb-6">
+              <p className="text-2xl sm:text-3xl leading-snug tracking-[-0.02em] font-medium max-w-3xl mb-6">
                 I&apos;m James. Mostly{" "}
                 <span
                   className="serif-accent"
