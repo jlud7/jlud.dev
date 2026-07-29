@@ -76,6 +76,11 @@ export default function Nav() {
             </a>
           </Magnetic>
           <Magnetic strength={0.3}>
+            <a href="/arcade" className="nav-link">
+              Arcade
+            </a>
+          </Magnetic>
+          <Magnetic strength={0.3}>
             <a href="#about" className={linkClass("about")}>
               About
             </a>
