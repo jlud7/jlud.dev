@@ -1,0 +1,81 @@
+{
+  "total": 2.850000000000001,
+  "items": [
+    {
+      "slot": "enemy.dart",
+      "est": 0.09
+    },
+    {
+      "slot": "enemy.dart",
+      "est": 0.09
+    },
+    {
+      "slot": "nebula.s1",
+      "est": 0.2
+    },
+    {
+      "slot": "nebula.s2",
+      "est": 0.2
+    },
+    {
+      "slot": "nebula.s3",
+      "est": 0.2
+    },
+    {
+      "slot": "planet.s1",
+      "est": 0.09
+    },
+    {
+      "slot": "planet.s2",
+      "est": 0.09
+    },
+    {
+      "slot": "planet.s3",
+      "est": 0.09
+    },
+    {
+      "slot": "ship.player",
+      "est": 0.21000000000000002
+    },
+    {
+      "slot": "enemy.ray",
+      "est": 0.09
+    },
+    {
+      "slot": "enemy.mine",
+      "est": 0.09
+    },
+    {
+      "slot": "enemy.turret",
+      "est": 0.09
+    },
+    {
+      "slot": "enemy.ace",
+      "est": 0.09
+    },
+    {
+      "slot": "boss.dreadwing",
+      "est": 0.21000000000000002
+    },
+    {
+      "slot": "boss.prism",
+      "est": 0.21000000000000002
+    },
+    {
+      "slot": "boss.maw",
+      "est": 0.21000000000000002
+    },
+    {
+      "slot": "nebula.s1",
+      "est": 0.2
+    },
+    {
+      "slot": "nebula.s2",
+      "est": 0.2
+    },
+    {
+      "slot": "nebula.s3",
+      "est": 0.2
+    }
+  ]
+}

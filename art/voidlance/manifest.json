@@ -1,0 +1,122 @@
+{
+  "styleGuide": "Stylized painterly sci-fi space arcade game art. Rich saturated color, soft volumetric glow, crisp readable silhouettes, cinematic lighting. No text, no watermark, no UI elements, no borders or letterboxing.",
+  "assets": [
+    {
+      "slot": "nebula.s1",
+      "kind": "backdrop",
+      "aspect": "3:2",
+      "quality": "high",
+      "prompt": "Vast deep-space nebula backdrop: indigo and teal gas clouds lit by cold cyan starlight, faint far-off shattered starship debris silhouettes, sparse bright stars with subtle bloom, dark dust lanes, serene but dangerous mood. Pure environment scenery only: absolutely no spaceships, no vehicles, no stations, no creatures anywhere in the frame."
+    },
+    {
+      "slot": "nebula.s2",
+      "kind": "backdrop",
+      "aspect": "3:2",
+      "quality": "high",
+      "prompt": "Vast deep-space nebula backdrop: towering magenta and violet nebula columns glowing from within, faint gold lightning veins crawling through the gas, deep plum darkness between the columns, ethereal and electric mood. Pure environment scenery only: absolutely no spaceships, no vehicles, no stations, no creatures anywhere in the frame."
+    },
+    {
+      "slot": "nebula.s3",
+      "kind": "backdrop",
+      "aspect": "3:2",
+      "quality": "high",
+      "prompt": "Vast deep-space backdrop: ominous ember-red and charcoal space-fortress horizon, smoldering rust-orange nebula haze, dark riveted steel silhouettes at extreme distance, embers drifting, oppressive militant mood. Pure environment scenery only: absolutely no spaceships, no vehicles, no stations, no creatures anywhere in the frame."
+    },
+    {
+      "slot": "planet.s1",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "medium",
+      "transparent": true,
+      "prompt": "One huge distant ice planet with pale blue-white latitude bands, subtle craters, and a thin elegant ring, rim-lit from the upper left against empty space, centered, full planet visible, 2D game art sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "planet.s2",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "medium",
+      "transparent": true,
+      "prompt": "One huge swirling amber-and-magenta gas giant planet with storm bands and a glowing polar aurora, rim-lit from the upper left, centered, full planet visible, 2D game art sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "planet.s3",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "medium",
+      "transparent": true,
+      "prompt": "One huge cracked volcanic planet, near-black crust with glowing orange lava fissures and a faint smoky atmosphere rim, rim-lit from the upper left, centered, full planet visible, 2D game art sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "ship.player",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "high",
+      "transparent": true,
+      "prompt": "Sleek dart-shaped starfighter seen from directly above, top-down orthographic view, nose pointing up: silver-white hull with teal glass cockpit and teal wingtip accents, subtle painted panel shading, twin engine nozzles at the rear, perfectly centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "enemy.dart",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "medium",
+      "transparent": true,
+      "prompt": "Small aggressive arrowhead drone fighter seen from the front, gunmetal grey hull with one glowing cyan eye-like intake, angular and cheap-looking swarm craft, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "enemy.ray",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "medium",
+      "transparent": true,
+      "prompt": "Mid-size manta-ray-shaped attack ship seen from the front, dark violet hull with two glowing magenta cannon pods under curved wings, sinister and sleek, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "enemy.mine",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "medium",
+      "transparent": true,
+      "prompt": "Spherical space mine bristling with short spikes, dark iron body with pulsing orange warning lights between the spikes, ominous, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "enemy.turret",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "medium",
+      "transparent": true,
+      "prompt": "Automated twin-barrel gun turret mounted on a jagged chunk of wrecked starship hull, dark steel with a single red sensor eye, seen from the front, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "enemy.ace",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "medium",
+      "transparent": true,
+      "prompt": "Elite golden interceptor starfighter seen from the front, gleaming gold hull with black racing stripes and a glowing white engine halo, arrogant and fast, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "boss.dreadwing",
+      "kind": "sprite",
+      "aspect": "3:2",
+      "quality": "high",
+      "transparent": true,
+      "prompt": "Massive broad-winged gunship battleship seen from the front, symmetrical, four glowing weapon pods under its wings and an armored central core, gunmetal and teal-black plating, menacing silhouette, centered, 2D game boss sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "boss.prism",
+      "kind": "sprite",
+      "aspect": "1:1",
+      "quality": "high",
+      "transparent": true,
+      "prompt": "Colossal crystalline geometric space station shaped like a faceted prism octahedron, translucent magenta-violet crystal glowing from a white-hot core, shards orbiting it, symmetrical, centered, 2D game boss sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    },
+    {
+      "slot": "boss.maw",
+      "kind": "sprite",
+      "aspect": "3:2",
+      "quality": "high",
+      "transparent": true,
+      "prompt": "Nightmarish mechanical maw: a ring of dark interlocking armored jaw segments around a glowing ember-red void core, like a mouth of the abyss opening toward the viewer, symmetrical, centered, 2D game boss sprite isolated on a plain flat pure white background, no shadow, no reflection."
+    }
+  ]
+}
