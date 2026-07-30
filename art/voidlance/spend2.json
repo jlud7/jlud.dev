@@ -1,0 +1,49 @@
+{
+  "total": 1.57,
+  "items": [
+    {
+      "slot": "ship.player",
+      "est": 0.21000000000000002
+    },
+    {
+      "slot": "nebula.s4",
+      "est": 0.2
+    },
+    {
+      "slot": "nebula.s5",
+      "est": 0.2
+    },
+    {
+      "slot": "planet.s4",
+      "est": 0.09
+    },
+    {
+      "slot": "planet.s5",
+      "est": 0.09
+    },
+    {
+      "slot": "enemy.lancer",
+      "est": 0.09
+    },
+    {
+      "slot": "enemy.phantom",
+      "est": 0.09
+    },
+    {
+      "slot": "enemy.hive",
+      "est": 0.09
+    },
+    {
+      "slot": "boss.siren",
+      "est": 0.21000000000000002
+    },
+    {
+      "slot": "boss.sovereign",
+      "est": 0.21000000000000002
+    },
+    {
+      "slot": "enemy.breaker",
+      "est": 0.09
+    }
+  ]
+}

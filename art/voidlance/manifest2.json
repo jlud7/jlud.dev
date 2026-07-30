@@ -1,0 +1,27 @@
+{
+  "styleGuide": "Stylized painterly sci-fi space arcade game art. Rich saturated color, soft volumetric glow, crisp readable silhouettes, cinematic lighting. No text, no watermark, no UI elements, no borders or letterboxing.",
+  "assets": [
+    { "slot": "ship.player", "kind": "sprite", "aspect": "1:1", "quality": "high", "transparent": true,
+      "prompt": "Sleek dart-shaped starfighter seen from directly behind and slightly above in a chase-camera view: nose pointing away into the distance with strong foreshortening, twin engine nozzles facing the viewer glowing bright teal-white, only a sliver of the upper hull visible, silver-white hull with teal accents on the wingtips, symmetrical, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection." },
+    { "slot": "nebula.s4", "kind": "backdrop", "aspect": "3:2", "quality": "high",
+      "prompt": "Vast deep-space nebula backdrop: cold emerald and viridian ion-storm clouds crackling with pale green filament lightning, drifting shards of shattered ice-rock in silhouette at extreme distance, thin toxic mist layers, eerie luminous mood. Pure environment scenery only: absolutely no spaceships, no vehicles, no stations, no creatures anywhere in the frame." },
+    { "slot": "nebula.s5", "kind": "backdrop", "aspect": "3:2", "quality": "high",
+      "prompt": "Vast deep-space backdrop: a blinding white-and-gold empyrean void, radiant god-rays streaming through pale luminous cloud banks, faint colossal black monolith silhouettes at extreme distance, sacred and terrifying final-zone mood. Pure environment scenery only: absolutely no spaceships, no vehicles, no stations, no creatures anywhere in the frame." },
+    { "slot": "planet.s4", "kind": "sprite", "aspect": "1:1", "quality": "medium", "transparent": true,
+      "prompt": "One huge toxic storm planet with swirling acid-green and teal cloud bands and a sickly emerald aurora crown, rim-lit from the upper left, centered, full planet visible, 2D game art sprite isolated on a plain flat pure white background, no shadow, no reflection." },
+    { "slot": "planet.s5", "kind": "sprite", "aspect": "1:1", "quality": "medium", "transparent": true,
+      "prompt": "One huge radiant molten-gold planet, gleaming white-gold seas of light with darker filigree continents, a soft blinding halo of atmosphere, rim-lit from the upper left, centered, full planet visible, 2D game art sprite isolated on a plain flat pure white background, no shadow, no reflection." },
+    { "slot": "enemy.lancer", "kind": "sprite", "aspect": "1:1", "quality": "medium", "transparent": true,
+      "prompt": "Needle-thin strafing interceptor starfighter seen from the front, polished emerald-green hull with two long rail-cannon spines running forward glowing pale green, fast and surgical looking, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection." },
+    { "slot": "enemy.phantom", "kind": "sprite", "aspect": "1:1", "quality": "medium", "transparent": true,
+      "prompt": "Sinister stealth fighter seen from the front, semi-translucent smoky black hull with ghostly violet light bleeding from seams and two dim violet eyes, wraith-like and half-materialized, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection." },
+    { "slot": "enemy.breaker", "kind": "sprite", "aspect": "1:1", "quality": "medium", "transparent": true,
+      "prompt": "Heavily armored ramming ship seen from the front, blunt reinforced prow like a battering ram, thick rust-and-steel plating with orange hazard stripes and small glowing furnace vents, brutal and unstoppable looking, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection." },
+    { "slot": "enemy.hive", "kind": "sprite", "aspect": "1:1", "quality": "medium", "transparent": true,
+      "prompt": "Bulbous drone-carrier pod ship seen from the front, dark chitinous organic-metal shell with hexagonal amber cells glowing from within and small open drone hatches, unsettling insectoid mood, centered, 2D game sprite isolated on a plain flat pure white background, no shadow, no reflection." },
+    { "slot": "boss.siren", "kind": "sprite", "aspect": "3:2", "quality": "high", "transparent": true,
+      "prompt": "Colossal spectral manta-ray mothership seen from the front, symmetrical, vast translucent aurora veils of violet-green light trailing like a cloak from its wings, rows of glowing pale-green sensor eyes across its crown, haunting deep-sea-in-space mood, centered, 2D game boss sprite isolated on a plain flat pure white background, no shadow, no reflection." },
+    { "slot": "boss.sovereign", "kind": "sprite", "aspect": "3:2", "quality": "high", "transparent": true,
+      "prompt": "Majestic colossal golden cathedral-flagship seen from the front, symmetrical, radiant white core burning at its heart, ornate gold filigree armor plates like a gothic reliquary, tiered spires and turret arrays along its wings, terrifyingly regal final-boss presence, centered, 2D game boss sprite isolated on a plain flat pure white background, no shadow, no reflection." }
+  ]
+}
