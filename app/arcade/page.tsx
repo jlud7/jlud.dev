@@ -165,6 +165,34 @@ export default function Arcade() {
         </div>
       </section>
 
+      <section className="relative z-10 pb-16 sm:pb-20">
+        <div className="max-w-5xl mx-auto px-5 sm:px-6">
+          <div
+            className="rounded-2xl border p-7 sm:p-9 flex flex-wrap items-center justify-between gap-5"
+            style={{ background: "var(--card-bg)", borderColor: "var(--card-border)" }}
+          >
+            <div className="max-w-[52ch]">
+              <p
+                className="font-mono text-[0.65rem] tracking-widest uppercase mb-2"
+                style={{ color: "#4456c7" }}
+              >
+                Beta cabinet · true 3D
+              </p>
+              <h3 className="text-lg font-semibold tracking-tight mb-2">Voidlance GL</h3>
+              <p className="text-sm leading-[1.75]" style={{ color: "var(--muted)" }}>
+                Voidlance rebuilt on a real-3D WebGL engine — a flat-shaded
+                polygon ship banking through Sector 1, from the wave scripts
+                to the three-phase boss. One finger steers; tap a second
+                finger to barrel roll.
+              </p>
+            </div>
+            <a href="/games/voidlance-gl/" className="card-link">
+              Fly the beta →
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section className="relative z-10 pb-24 sm:pb-36">
         <div className="max-w-5xl mx-auto px-5 sm:px-6">
           <div

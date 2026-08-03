@@ -49,7 +49,7 @@ const CFG = {
   SHIP_Z: 120, SPD0: 820, SPD_HI: 1260,
   HZ: 520, SPAWN_Z: 2300, OB_Z: 2500,
   BOLT_SPD: 590, AGG: 1, LEAD: 0,
-  LASER_SPD: 2900, FIRE_T: .12,
+  LASER_SPD: 3250, FIRE_T: .105,
   SHIP_R: 10, HULL: 5, LIVES: 3, NOVA_MAX: 2,
   ROLL_T: .52, ROLL_CD: .74, DEFL_R: 46, DEFL_Z: 270,
   INV_T: .9, CHAIN_T: 1.5, CHAIN_MAX: 8,
@@ -60,7 +60,7 @@ const CFG = {
   SHIELDS: 2,
   BOOST_MUL: 1.8, BRAKE_MUL: .55, BOOST_T: 2.5, BOOST_RE: 4, BRAKE_F: .6,
   CONV_Z: 1150,
-  STEER_WN: 33,
+  STEER_WN: 40, STEER_VX: 2500, STEER_VY: 2800,
   RING_R: 64, RING_MET: .33, RING_SC: 150,
 };
 const SENSF = [.75, 1, 1.3];
@@ -246,9 +246,11 @@ const A = {
     s.start(t0); s.stop(t0 + dur + .02);
   },
   laser(alt){ if (!this.on()) return; const t = this.t();
-    this.env('square', alt ? 940 : 880, 300, .08, .035, t, this.master, alt ? .18 : -.18); },
+    const j = rnd(.96, 1.04); // ±4% pitch jitter — streams never buzz
+    this.env('square', (alt ? 940 : 880) * j, 300 * j, .075, .03, t, this.master, alt ? .18 : -.18);   // zap
+    this.env('triangle', 2400 * j, 1500 * j, .02, .022, t, this.master, alt ? .1 : -.1); },            // click
   hitS(){ if (!this.on()) return; const t = this.t();
-    this.noise(.06, .12, t, 3200, 800, 'bandpass'); this.env('triangle', 520, 180, .06, .1, t); },
+    this.noise(.05, .11, t, 2400, 500, 'bandpass'); this.env('sine', 300, 96, .07, .13, t); }, // thock
   boomS(){ if (!this.on()) return; const t = this.t();
     this.noise(.3, .3, t, 1600, 160); this.env('sine', 200, 55, .28, .25, t); },
   boomB(){ if (!this.on()) return; const t = this.t();
@@ -1320,6 +1322,7 @@ const G = {
   spd: CFG.SPD0, tspd: CFG.SPD0,
   meter: 1, boostK: 0, brakeK: 0, wasB: false, wasK: false, qaBoost: 0,
   fovK: 1, pull: 0, kickX: 0, kickY: 0, camRoll: 0,
+  camLat: 0, camVer: 0, retX: 0, retY: 0, retVX: 0, retVY: 0,
   skimK: 0, skimOn: false, skimSetT: 0,
   aimHot: false, ringN: 0, ringSet: 0, setGot: 0,
   ally: null, rescue: null, bossIntro: null, phasePulse: 0, outro: null,
@@ -1329,12 +1332,14 @@ const G = {
 /* ── ship (sim space) ────────────────────────────────────────────────── */
 const ship = { k: 'S', z: CFG.SHIP_Z, x: 0, y: 0, tx: 0, ty: 0, bank: 0, pitch: 0,
   roll: 0, rollDir: 1, rollCd: 0, rollN: 0, inv: 0, fireT: 0, alive: true, alt: false,
-  svx: 0, svy: 0, wvx: 0, wvy: 0, vb: 0, mv: 0, flash: 0,
+  svx: 0, svy: 0, wvx: 0, wvy: 0, vb: 0, mv: 0, flash: 0, muzzleT: 0,
   s: 0, modelM: new Float32Array(16), wp: V3(), wr: V3(), wu: V3(), wf: V3() };
 function resetShip(){
   ship.x = ship.tx = 0; ship.y = ship.ty = SB.y1 * .5;
   ship.bank = 0; ship.pitch = 0; ship.roll = 0; ship.rollCd = 0; ship.inv = 2.2; ship.alive = true;
   ship.fireT = .1; ship.svx = ship.svy = ship.wvx = ship.wvy = ship.vb = 0;
+  ship.muzzleT = 0;
+  G.retX = ship.x; G.retY = ship.y; G.retVX = G.retVY = 0;
 }
 
 /* ── mapping layer: sim (x right, y down, z depth) → rail world ──────── */
@@ -1390,7 +1395,8 @@ const lasers = mkPool(80, () => ({ k: 'l', p: V3(), pp: V3(), v: V3(),
 const sparks = [];   // {p,v,life,maxLife,col,w,len}
 const shards = [];   // {pos,vel,axis,rate,rot,life,verts,nrm,col,em}
 const rfx = [];      // expanding ring pulses {p,t,col}
-const flo = mkPool(22, () => ({ on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, txt: '', col: '#FFF', big: false }));
+const flo = mkPool(22, () => ({ on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, txt: '', col: '#FFF', big: false,
+  use3: false, wp3: V3(), ox: 0 }));
 
 const BOLT_CV = {}; BOLT_CV[EBOLT] = hexV(EBOLT); BOLT_CV[EBOLT2] = hexV(EBOLT2); BOLT_CV[SKIN.laser] = hexV(SKIN.laser);
 function cvOf(col){ if (!BOLT_CV[col]) { try { BOLT_CV[col] = hexV(col); } catch (e) { BOLT_CV[col] = [1, 1, 1]; } } return BOLT_CV[col]; }
@@ -1406,7 +1412,7 @@ function spawnBolt(x, y, z, tx, ty, spd, col, r){
   vcopy(b.pp, b.p);
   b.x = x; b.y = y; b.z = z; b.pz = z;
   b.col = col || EBOLT; b.cv = cvOf(b.col); b.r = r || 5; b.defl = false; b.t = 0;
-  if (!F.bolts) { F.bolts = 1; comm('Bolts incoming — try a roll. It deflects.'); }
+  if (!F.bolts) { F.bolts = 1; comm('Bolts incoming — tap a second finger to roll. It deflects.'); }
   return b;
 }
 function spark(x, y, z, col, n, spd){
@@ -1491,8 +1497,15 @@ function boom(x, y, z, col, big){
 }
 function addFloat(sx, sy, txt, col, big){
   const f = flo.get(); if (!f) return;
+  f.use3 = false;
   f.x = sx + rnd(-16, 16); f.y = sy + rnd(-8, 8); f.vy = rnd(-64, -46);
   f.vx = rnd(-30, 30);
+  f.t = 0; f.txt = txt; f.col = col; f.big = !!big;
+}
+function addFloat3(x, y, z, txt, col, big){ // score pop anchored in 3D, drifts at the camera
+  const f = flo.get(); if (!f) return;
+  f.use3 = true; mapW(x, y, z, f.wp3);
+  f.ox = rnd(-12, 12); f.x = 0; f.y = 0; f.vx = 0; f.vy = 0;
   f.t = 0; f.txt = txt; f.col = col; f.big = !!big;
 }
 
@@ -1508,18 +1521,21 @@ function addScore(base, x, y, z, chained){
   }
   const pts = base * mult;
   G.score += pts;
-  if (x !== undefined) {
-    const pr = P2(x, y, z);
-    if (pr.ok) addFloat(pr.x, pr.y, '+' + pts, chained && mult > 1 ? '#FFD24A' : '#EAF6FF', mult >= 4);
-  }
+  if (x !== undefined)
+    addFloat3(x, y, z, '+' + pts, chained && mult > 1 ? '#FFD24A' : '#EAF6FF', mult >= 4);
 }
 function breakChain(){ G.chainN = 0; G.chainT = 0; }
 
 /* ── ship verbs ──────────────────────────────────────────────────────── */
+let rollsN = 0; // QA: successful roll count
 function doRoll(dir){
   if (ship.rollCd > 0 || !ship.alive || G.state !== 'game' || G.paused) return;
   ship.roll = CFG.ROLL_T; ship.rollDir = dir; ship.rollCd = CFG.ROLL_CD; ship.rollN = 0;
+  rollsN++;
   A.whoosh(); haptic('light');
+}
+function autoRollDir(){ // 5.1 rule: roll with the current bank, right if level
+  return Math.abs(ship.bank) > .05 ? (ship.bank > 0 ? 1 : -1) : 1;
 }
 function doNova(){
   if (G.state !== 'game' || G.paused || !ship.alive || G.intro > 0 || G.outro) return;
@@ -1584,28 +1600,40 @@ function deflect(b){
   if (ship.rollN === 3) { G.slowT = .3; G.slow = .45; }
   if (ship.rollN === 5) commOnce('showoff', 'Show-off.');
 }
-const LV_BARRELS = [
-  [[-9, 0], [9, 0]],
-  [[-5, 0], [5, 0], [-14, 0], [14, 0]],
-  [[-6, 0], [6, 0], [-16, -70], [16, 70]],
+/* 5.1 lasers: world-space WINGTIP muzzles (model coords through the ship's
+   full attitude matrix), converging EXACTLY on the far reticle point — the
+   canvas 4.2 WYSIWYG rule, native. Paired volleys; L3's chin pair keeps the
+   old outward spray. Fourth field = lateral spread (world u) at convergence. */
+const LV_MUZ = [
+  [[-2.45, -.32, -1.30, 0], [2.45, -.32, -1.30, 0]],
+  [[-2.45, -.32, -1.30, 0], [2.45, -.32, -1.30, 0], [-1.05, -.02, 1.60, 0], [1.05, -.02, 1.60, 0]],
+  [[-2.45, -.32, -1.30, 0], [2.45, -.32, -1.30, 0], [-1.05, -.02, 1.60, -2.2], [1.05, -.02, 1.60, 2.2]],
 ];
+const CONV_W = V3();
+function muzzleW(out, m){
+  const M = ship.modelM;
+  out[0] = M[0] * m[0] + M[4] * m[1] + M[8] * m[2] + M[12];
+  out[1] = M[1] * m[0] + M[5] * m[1] + M[9] * m[2] + M[13];
+  out[2] = M[2] * m[0] + M[6] * m[1] + M[10] * m[2] + M[14];
+  return out;
+}
 function fireLasers(){
-  const br = LV_BARRELS[G.laser - 1];
-  const spd = CFG.LASER_SPD * (G.laser === 3 ? 1.1 : 1);
-  for (const [ox, vx] of br) {
+  const spd = CFG.LASER_SPD * (G.laser === 3 ? 1.1 : 1) * WS;
+  mapW(G.retX, G.retY, CFG.CONV_Z, CONV_W); // the far reticle, exactly
+  for (const m of LV_MUZ[G.laser - 1]) {
     const l = lasers.get(); if (!l) return;
-    const sx0 = ship.x + ox, sy0 = ship.y + 2, sz0 = ship.z + 8;
-    mapW(sx0, sy0, sz0, l.p);
+    muzzleW(l.p, m);
     vcopy(l.pp, l.p);
-    const cvx = vx !== 0 ? vx : -ox * spd / (CFG.CONV_Z - ship.z);
-    vset(l.v,
-      -FS.r[0] * cvx * SX + FS.f[0] * spd * WS,
-      -FS.r[1] * cvx * SX + FS.f[1] * spd * WS,
-      -FS.r[2] * cvx * SX + FS.f[2] * spd * WS);
-    l.x = sx0; l.y = sy0; l.z = sz0; l.pz = sz0;
+    vsub(l.v, CONV_W, l.p);
+    if (m[3]) vmadd(l.v, l.v, shipR, m[3]);
+    const vl = vlen(l.v) || 1;
+    vscale(l.v, l.v, spd / vl);
+    const c = canvasOf(l.p);
+    l.x = c.x; l.y = c.y; l.z = c.z; l.pz = l.z;
     l.ally = false; l.cv = cvOf(SKIN.laser);
     G.st.shots++;
   }
+  ship.muzzleT = .036; // 2-frame muzzle flash
   A.laser(ship.alt = !ship.alt);
 }
 
@@ -1649,18 +1677,42 @@ function updShip(dt, rdt){
   if (kx || ky) { ship.tx = clamp(ship.tx + kx * CFG.KB_SPD * dt, -SB.x, SB.x);
     ship.ty = clamp(ship.ty + ky * CFG.KB_SPD * dt, SB.y0, SB.y1); }
   if (QA.steer) { ship.tx = QA.steer[0] * SB.x; ship.ty = QA.steer[1] >= 0 ? QA.steer[1] * SB.y1 : QA.steer[1] * -SB.y0; }
+  const steering = !!(kx || ky || QA.steer || PRIM !== null || MD !== null);
   const pxx = ship.x, pyy = ship.y, wn = CFG.STEER_WN;
-  ship.svx += (wn * wn * (ship.tx - ship.x) - 2 * wn * ship.svx) * dt;
-  ship.svy += (wn * wn * (ship.ty - ship.y) - 2 * wn * ship.svy) * dt;
-  ship.x = clamp(ship.x + ship.svx * dt, -SB.x, SB.x);
-  ship.y = clamp(ship.y + ship.svy * dt, SB.y0, SB.y1);
+  { // critically damped spring, substepped so wn·h stays small at any framerate;
+    // velocity cap: full flicks SWEEP the screen (~150-190 ms), never teleport
+    const n = Math.max(1, Math.ceil(dt / .02)), h = dt / n;
+    for (let it = 0; it < n; it++) {
+      ship.svx += (wn * wn * (ship.tx - ship.x) - 2 * wn * ship.svx) * h;
+      ship.svy += (wn * wn * (ship.ty - ship.y) - 2 * wn * ship.svy) * h;
+      ship.svx = clamp(ship.svx, -CFG.STEER_VX, CFG.STEER_VX);
+      ship.svy = clamp(ship.svy, -CFG.STEER_VY, CFG.STEER_VY);
+      ship.x = clamp(ship.x + ship.svx * h, -SB.x, SB.x);
+      ship.y = clamp(ship.y + ship.svy * h, SB.y0, SB.y1);
+    }
+  }
   const vx = (ship.x - pxx) / Math.max(dt, .001), vy = (ship.y - pyy) / Math.max(dt, .001);
   ship.vb = lerp(ship.vb || 0, clamp(vx / 250, -1.2, 1.2), 1 - Math.exp(-dt * 12));
   ship.wvx = lerp(ship.wvx || 0, vx, 1 - Math.exp(-dt * 6));
   ship.wvy = lerp(ship.wvy || 0, vy, 1 - Math.exp(-dt * 6));
-  ship.bank = lerp(ship.bank, clamp(vx * .0032, -.95, .95), 1 - Math.exp(-dt * 10));
-  ship.pitch = lerp(ship.pitch, clamp(-vy * .0011, -.38, .38), 1 - Math.exp(-dt * 9));
+  if (steering) {
+    ship.bank = lerp(ship.bank, clamp(vx * .0032, -.95, .95), 1 - Math.exp(-dt * 10));
+    ship.pitch = lerp(ship.pitch, clamp(-vy * .0011, -.38, .38), 1 - Math.exp(-dt * 9));
+  } else {
+    // AUTO-LEVEL: attitude eases home over ~0.6 s (never snaps), and the ship
+    // drifts gently with the rail's curvature so hands-off reads alive
+    const bend = clamp(-headingDiff(uOfS(ship.s), uOfS(ship.s) + 0.35) * 1.1, -.3, .3);
+    ship.tx = clamp(ship.tx + bend * 46 * dt, -SB.x * .92, SB.x * .92);
+    ship.bank = lerp(ship.bank, bend + Math.sin(G.rt * 1.1) * .035, 1 - Math.exp(-dt * 4.8));
+    ship.pitch = lerp(ship.pitch, Math.sin(G.rt * .8) * .022, 1 - Math.exp(-dt * 4.2));
+  }
   ship.mv = lerp(ship.mv || 0, Math.min(6, Math.abs(vx) * .012), 1 - Math.exp(-dt * 8));
+  // reticle lag-spring — the diamonds feel attached to the ship, not painted on glass
+  const rw = 24;
+  G.retVX += (rw * rw * (ship.x - G.retX) - 2 * rw * G.retVX) * dt;
+  G.retVY += (rw * rw * (ship.y - G.retY) - 2 * rw * G.retVY) * dt;
+  G.retX += G.retVX * dt; G.retY += G.retVY * dt;
+  if (ship.muzzleT > 0) ship.muzzleT -= dt;
   if (ship.inv > 0) ship.inv -= dt;
   if (ship.rollCd > 0) ship.rollCd -= dt;
   if (G.novaCd > 0) G.novaCd -= dt;
@@ -1991,7 +2043,7 @@ function dmgFoe(f, d, byLaser){
   f.hp -= d; f.flash = .1; f.sq = .18;
   if (byLaser) G.st.hits++;
   if (f.hp <= 0) killFoe(f);
-  else { spark(f.x, f.y, f.z, '#FFFFFF', 4, 140); A.hitS(); }
+  else { spark(f.x, f.y, f.z, '#FFFFFF', 3, 150); A.hitS(); } // sq pulse above = radial push
 }
 function killFoe(f, silent){
   const idx = foes.indexOf(f); if (idx < 0) return;
@@ -2000,6 +2052,7 @@ function killFoe(f, silent){
   if (f.modelM) explodeMesh(MESHES[f.kind === 'ace' ? 'ace' : FOE_MESH[f.kind]].flat, f.modelM);
   boom(f.x, f.y, f.z, col, f.kind === 'ace' || f.kind === 'ray');
   if (silent) return;
+  G.hstop = Math.max(G.hstop, .025); // kill hit-stop — kills land, hits don't
   G.st.kills++; D.kills++;
   addScore(SCORES[f.kind], f.x, f.y, f.z, true);
   if (f.kind === 'ace') {
@@ -2266,7 +2319,7 @@ function updLasers(dt){
       const rr2 = f.r + 13;
       if (d2(f.x, f.y, l.x, l.y) < rr2 * rr2) {
         dmgFoe(f, 1, !l.ally);
-        spark(l.x, l.y, f.z, '#FFFFFF', 3, 120);
+        flashFX(l.x, l.y, f.z, 14); // white impact flower at the hit point
         consumed = true; break;
       }
     }
@@ -2690,8 +2743,34 @@ function updParts(dt){
   }
   for (let i = 0; i < flo.length; i++) {
     const f = flo[i]; if (!f.on) continue;
-    f.t += dt; f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 150 * dt;
+    f.t += dt;
+    if (f.use3) { // float toward the camera — the pop reads as coming at you
+      vsub(TMP, camPos, f.wp3); const dl = vlen(TMP) || 1;
+      vmadd(f.wp3, f.wp3, TMP, Math.min(.5, (26 * dt) / dl));
+    } else { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 150 * dt; }
     if (f.t > .95) f.on = false;
+  }
+}
+
+/* ── near-field dust motes — cheap parallax quads streaming past (5.1) ── */
+const DUST_N = 52;
+const dust = [];
+function updDust(){
+  if (G.state !== 'game' && G.state !== 'title') return;
+  if (!dust.length) for (let i = 0; i < DUST_N; i++) dust.push({ p: V3(), s: rnd(.55, 1.35), ok: false });
+  for (let i = 0; i < DUST_N; i++) {
+    const d = dust[i];
+    let dz = 0, dr = 0, du2 = 0;
+    if (d.ok) {
+      vsub(TMP, d.p, ship.wp);
+      dz = vdot(TMP, FS.f); dr = vdot(TMP, FS.r); du2 = vdot(TMP, FS.u);
+    }
+    if (!d.ok || dz < -12 || dz > 100 || Math.abs(dr) > 34 || Math.abs(du2) > 26) {
+      vmadd(d.p, ship.wp, FS.f, rnd(20, 100));
+      vmadd(d.p, d.p, FS.r, rnd(-32, 32));
+      vmadd(d.p, d.p, FS.u, rnd(-24, 24));
+      d.ok = true;
+    }
   }
 }
 
@@ -2757,10 +2836,10 @@ function updGame(dt, rdt){
       const f = foes[i];
       if (f.delay > 0 || f.z > CFG.CONV_Z * 1.4 || f.z < CFG.SHIP_Z + 60) continue;
       const rr2 = f.r + 16;
-      if (Math.abs(f.x - ship.x) < rr2 && Math.abs(f.y - ship.y) < rr2) { G.aimHot = true; break; }
+      if (Math.abs(f.x - G.retX) < rr2 && Math.abs(f.y - G.retY) < rr2) { G.aimHot = true; break; }
     }
     if (!G.aimHot && G.boss && G.boss.z < CFG.CONV_Z * 1.7 &&
-        Math.abs(G.boss.x - ship.x) < 130 && Math.abs(G.boss.y - ship.y) < 95) G.aimHot = true;
+        Math.abs(G.boss.x - G.retX) < 130 && Math.abs(G.boss.y - G.retY) < 95) G.aimHot = true;
   }
 }
 
@@ -2776,7 +2855,7 @@ function updSpatial(dt){
   m4basis(SM, MF.r, MF.u, MF.f, ship.wp);
   const rollP = ship.roll > 0 ? 1 - ship.roll / CFG.ROLL_T : 0;
   const rollAng = rollP > 0 ? ship.rollDir * TAU * (rollP * rollP * (3 - 2 * rollP)) : 0;
-  m4rotAxisApply(SM, SM, [0, 1, 0], clamp(ship.vb * .33, -.42, .42));
+  m4rotAxisApply(SM, SM, [0, 1, 0], clamp(ship.vb * .11, -.105, .105)); // ~6° nose-lead into the turn
   m4rotAxisApply(SM, SM, [1, 0, 0], ship.pitch);
   m4rotAxisApply(SM, SM, [0, 0, 1], ship.bank + rollAng);
   vset(shipR, SM[0], SM[1], SM[2]);
@@ -2788,8 +2867,12 @@ function updSpatial(dt){
   // chase camera: trails the rail, banks into upcoming bends
   const duBack = 14.5 / Math.max(FS.dlen, 1);
   pathFrame(uOfS(ship.s) - duBack, FCAM);
+  // chase lag ~0.12 s: the camera trails the ship's lateral moves, so dodges read
   const latG = -ship.x * SX, verG = -ship.y * SY;
-  vmadd(camPos, vmadd(camPos, FCAM.p, FCAM.r, latG * 0.8), FCAM.u, verG * 0.8 + 3.3);
+  const ck = 1 - Math.exp(-dt / .12);
+  G.camLat += (latG - G.camLat) * ck;
+  G.camVer += (verG - G.camVer) * ck;
+  vmadd(camPos, vmadd(camPos, FCAM.p, FCAM.r, G.camLat * 0.8), FCAM.u, G.camVer * 0.8 + 3.3);
   // shake + hit kick, in camera axes
   const sh = G.shake * G.shake * 13;
   const kx = (rnd(-1, 1) * sh + G.kickX) * .028, ky = (rnd(-1, 1) * sh + G.kickY) * .028;
@@ -2799,7 +2882,8 @@ function updSpatial(dt){
   vmadd(camTarget, camTarget, FS.u, 1.5);
   const turn = headingDiff(uOfS(ship.s), uOfS(ship.s) + 0.35);
   const rollTilt = ship.roll > 0 ? ship.rollDir * Math.sin(rollP * Math.PI) * .085 : 0;
-  const camRollT = clamp(-turn * 0.5, -.32, .32) + ship.bank * 0.15 + rollTilt;
+  // path banking + 25% of player bank; combined rolls capped (no nausea)
+  const camRollT = clamp(clamp(-turn * 0.5, -.32, .32) + ship.bank * 0.25 + rollTilt, -.42, .42);
   G.camRoll += (camRollT - G.camRoll) * Math.min(1, 4.5 * dt);
   const vdir = vnorm(TMP, vsub(TMP, camTarget, camPos));
   const side = vnorm(TMP2, vcross(TMP2, vdir, FCAM.u));
@@ -2855,6 +2939,7 @@ function update(dt, rdt){
     }
   }
   updSpatial(rdt);
+  updDust();
   if (G.grace > 0) G.grace -= rdt;
   A.tick();
 }
@@ -3219,13 +3304,13 @@ function buildSegs(pulse){
     pushSegV(b.p, TMP, 4.4, 0.52, c[0] * .85 * fade, c[1] * .85 * fade, c[2] * .85 * fade);
     pushSegV(b.p, TMP, 2.2, 0.24, 1.15 * fade, 1.05 * fade, 1.0 * fade);
   }
-  // player/ally lasers
+  // player/ally lasers — long, fast bolts: streams read as energy, not dashes
   for (let i = 0; i < lasers.length; i++) {
     const l = lasers[i]; if (!l.on) continue;
     vnorm(TMP, l.v);
     const c = l.cv;
-    pushSegV(l.p, TMP, 9.5, 0.46, c[0] * .9, c[1] * .9, c[2] * .9);
-    pushSegV(l.p, TMP, 5.2, 0.2, 1.3, 1.35, 1.3);
+    pushSegV(l.p, TMP, 13.5, 0.44, c[0] * .9, c[1] * .9, c[2] * .9);
+    pushSegV(l.p, TMP, 7.6, 0.2, 1.3, 1.35, 1.3);
   }
   // sparks / flashes
   for (let i = 0; i < sparks.length; i++) {
@@ -3241,6 +3326,13 @@ function buildSegs(pulse){
     pushRingSegs(r.p, rad, 7, r.col[0] * al, r.col[1] * al, r.col[2] * al, .17);
   }
   if (G.state === 'game' || G.state === 'title' || G.state === 'card') {
+    // near-field dust: parallax at cruise, streak lines under boost
+    const dal = .045 + G.spd * .00006 + G.boostK * .16;
+    const dln = .8 + G.spd * .0018 + G.boostK * 6.5;
+    for (let i = 0; i < dust.length; i++) {
+      const d = dust[i]; if (!d.ok) continue;
+      pushSegV(d.p, FS.f, dln * d.s, .05 + .05 * d.s, dal, dal * 1.06, dal * 1.15);
+    }
     if (ship.alive) {
       // engine glow + boost flare + short trail
       const gp = .8 + pulse * .35 + G.boostK * 1.1;
@@ -3253,6 +3345,15 @@ function buildSegs(pulse){
         vmadd(TMP3, ship.wp, shipF, -2.4 - k * 2.1);
         const a = (1 - k / 3.6) * (.3 + G.boostK * .35 + ship.mv * .04);
         pushSegV(TMP3, shipF, 3.3, 0.46 - k * .08, tc[0] * a, tc[1] * a, tc[2] * a);
+      }
+      // wingtip muzzles: light barrel glow + 2-frame flash on each volley
+      for (let mi = 0; mi < 2; mi++) {
+        muzzleW(TMP4, LV_MUZ[0][mi]);
+        pushSegV(TMP4, shipF, .9, .2, .04, .16, .16);
+        if (ship.muzzleT > 0) {
+          const fa = ship.muzzleT / .036;
+          pushSegV(TMP4, shipF, 2.0 * fa + .6, .5, .5 * fa + .1, .95 * fa + .2, .9 * fa + .2);
+        }
       }
       // roll sparkle
       if (ship.roll > 0) {
@@ -3267,17 +3368,18 @@ function buildSegs(pulse){
         }
       }
     }
-    // dual convergence reticle (gameplay only)
+    // dual convergence reticle (gameplay only) — lag-sprung, and the far
+    // diamond sits EXACTLY where the wingtip streams converge (WYSIWYG)
     if (G.state === 'game' && ship.alive && G.intro <= 0 && !G.outro) {
       const hot = G.aimHot, blinkR = hot && ((G.rt * 8) | 0) % 2 === 0;
+      mapW(G.retX, G.retY, CFG.CONV_Z, TMP4); // the laser convergence point
       for (let dR = 0; dR < 2; dR++) {
         const far = dR === 1;
-        const dist = far ? (CFG.CONV_Z - CFG.SHIP_Z) * WS : (CFG.CONV_Z - CFG.SHIP_Z) * WS * .42;
+        const P = far ? TMP4 : vlerp(TMP3, nosePos, TMP4, .42);
         const rad = (far ? 2.1 : 1.15) * (1 - .24 * G.brakeK), al = far ? (hot ? .95 : .45) : .7;
         const cr = blinkR && far ? [1.0, .38, .45] : [0.15, 0.85, 0.8];
-        vmadd(TMP4, nosePos, aimDir, dist);
-        const cU = vmadd(V3(), TMP4, shipU, rad), cR = vmadd(V3(), TMP4, shipR, rad),
-              cD = vmadd(V3(), TMP4, shipU, -rad), cL = vmadd(V3(), TMP4, shipR, -rad);
+        const cU = vmadd(V3(), P, shipU, rad), cR = vmadd(V3(), P, shipR, rad),
+              cD = vmadd(V3(), P, shipU, -rad), cL = vmadd(V3(), P, shipR, -rad);
         const corners = [cU, cR, cD, cL];
         for (let q = 0; q < 4; q++) {
           const p1 = corners[q], p2 = corners[(q + 1) % 4];
@@ -3625,8 +3727,14 @@ function drawFloats(){
   for (let i = 0; i < flo.length; i++) {
     const f = flo[i]; if (!f.on) continue;
     const a = f.t < .12 ? f.t / .12 : clamp((0.95 - f.t) / .3, 0, 1);
-    const sc = f.big ? 1 + Math.max(0, .25 - f.t) * 3 : 1;
-    hctx.save(); hctx.translate(f.x, f.y); hctx.scale(sc, sc);
+    let x = f.x, y = f.y, g = 1;
+    if (f.use3) { // 3D-anchored: reproject every frame, grow as it nears the camera
+      const pr = projW(f.wp3); if (!pr.ok) continue;
+      x = pr.x + f.ox; y = pr.y - f.t * 46;
+      g = 1 + Math.min(1.15, f.t * 1.3);
+    }
+    const sc = (f.big ? 1 + Math.max(0, .25 - f.t) * 3 : 1) * g;
+    hctx.save(); hctx.translate(x, y); hctx.scale(sc, sc);
     tx2(f.txt, 0, 0, f.big ? 18 : 13, f.col, 'center', 900, a);
     hctx.restore();
   }
@@ -3668,8 +3776,8 @@ function drawTitleUI(){
   const pulse = .55 + .45 * Math.sin(G.rt * 3.4);
   spaced('TAP TO ENGAGE', vpx, ch * (land ? .46 : .49), land ? 20 : 22, 'rgba(59,232,210,' + (0.55 + pulse * .45).toFixed(2) + ')', 4, 900);
   const cy2 = ch * (land ? .565 : .565);
-  tx2('DRAG steer · SWIPE barrel roll · 2-FINGER TAP nova', vpx, cy2, Math.min(land ? 12 : 12.5, cw / 34), '#7E93B8', 'center', 600);
-  tx2('HOLD BOOST / BRAKE · rolls deflect enemy bolts', vpx, cy2 + 18, Math.min(11, cw / 38), '#5E729C', 'center', 600);
+  tx2('DRAG steer · TAP with a 2ND FINGER to barrel roll', vpx, cy2, Math.min(land ? 12 : 12.5, cw / 34), '#7E93B8', 'center', 600);
+  tx2('HOLD BOOST / BRAKE · NOVA button · rolls deflect bolts', vpx, cy2 + 18, Math.min(11, cw / 38), '#5E729C', 'center', 600);
   tx2('GL beta — progress saves separately from the main game', vpx, cy2 + 36, Math.min(10.5, cw / 40), '#4A5C7E', 'center', 600);
   // best + medal
   const sy = ch * (land ? .87 : .77);
@@ -3805,7 +3913,8 @@ function draw(){
 /* ── input ───────────────────────────────────────────────────────────── */
 const keys = new Set();
 const TP = new Map();
-let PRIM = null, lastTap = 0, lastSide = 0;
+let PRIM = null;
+const TAP_MS = 220, TAP_PX = 14; // second-finger tap window (5.1 roll input)
 function onDown(x, y){
   A.unlock();
   switch (G.state) {
@@ -3831,38 +3940,35 @@ function onDown(x, y){
   }
   return 'ui';
 }
+/* 5.1 input scheme: one finger drags to steer (4 px deadzone for micro-aim);
+   a SECOND-finger tap anywhere off the buttons = barrel roll (direction =
+   current bank, right if level). Swipe-to-roll is GONE — it collided with
+   drag-steering. NOVA is button-only now. */
 hud.addEventListener('touchstart', e => {
   e.preventDefault();
   for (const t of e.changedTouches) {
     const x = t.clientX, y = t.clientY;
     const kind = onDown(x, y);
-    const o = { x, y, x0: x, y0: y, t0: performance.now(), hist: [[performance.now(), x, y]], kind, ax: ship.tx, ay: ship.ty };
+    const o = { x, y, x0: x, y0: y, t0: performance.now(), kind, ax: ship.tx, ay: ship.ty, roll2: false };
     TP.set(t.identifier, o);
     if (kind === 'play') {
       if (PRIM === null) PRIM = t.identifier;
-      else doNova();
+      else o.roll2 = true; // second-finger tap candidate → barrel roll on release
     }
   }
 }, { passive: false });
 hud.addEventListener('touchmove', e => {
   e.preventDefault();
-  const now = performance.now();
   for (const t of e.changedTouches) {
     const o = TP.get(t.identifier); if (!o) continue;
     o.x = t.clientX; o.y = t.clientY;
-    o.hist.push([now, o.x, o.y]);
-    while (o.hist.length > 2 && now - o.hist[0][0] > 160) o.hist.shift();
     if (t.identifier === PRIM && G.state === 'game' && !G.paused && ship.alive) {
       const f = CFG.DRAG * SENSF[D.sens] * (300 / Math.min(cw, ch));
-      ship.tx = clamp(o.ax + (o.x - o.x0) * f, -SB.x, SB.x);
-      ship.ty = clamp(o.ay + (o.y - o.y0) * f, SB.y0, SB.y1);
-      const h0 = o.hist[0];
-      const dx = o.x - h0[1], dy = o.y - h0[2];
-      if (Math.abs(dx) >= 76 && Math.abs(dx) > 2.1 * Math.abs(dy) && ship.rollCd <= 0) {
-        doRoll(dx > 0 ? 1 : -1);
-        o.hist = [[now, o.x, o.y]];
-        o.x0 = o.x; o.y0 = o.y; o.ax = ship.tx; o.ay = ship.ty;
-      }
+      const rx = o.x - o.x0, ry = o.y - o.y0;
+      const dx = Math.abs(rx) <= 4 ? 0 : rx - 4 * Math.sign(rx); // 4 px deadzone
+      const dy = Math.abs(ry) <= 4 ? 0 : ry - 4 * Math.sign(ry);
+      ship.tx = clamp(o.ax + dx * f, -SB.x, SB.x);
+      ship.ty = clamp(o.ay + dy * f, SB.y0, SB.y1);
     }
   }
 }, { passive: false });
@@ -3870,16 +3976,12 @@ function endTouch(e){
   e.preventDefault();
   for (const t of e.changedTouches) {
     const o = TP.get(t.identifier); TP.delete(t.identifier);
-    if (t.identifier === PRIM) {
-      PRIM = null;
-      if (o && G.state === 'game' && !G.paused) {
-        const dur = performance.now() - o.t0, dist = Math.hypot(o.x - o.x0, o.y - o.y0);
-        if (dur < 230 && dist < 14) {
-          const side = o.x < cw / 2 ? -1 : 1, now = performance.now();
-          if (now - lastTap < 340 && side === lastSide) { doRoll(side); lastTap = 0; }
-          else { lastTap = now; lastSide = side; }
-        }
-      }
+    if (t.identifier === PRIM) { PRIM = null; continue; }
+    // second-finger tap = barrel roll: short, still, and not on a button
+    if (o && o.roll2 && G.state === 'game' && !G.paused) {
+      const dur = performance.now() - o.t0, dist = Math.hypot(o.x - o.x0, o.y - o.y0);
+      VLGL._tap = { dur: +dur.toFixed(0), dist: +dist.toFixed(1), cd: +ship.rollCd.toFixed(2) }; // QA probe
+      if (dur < TAP_MS && dist < TAP_PX) doRoll(autoRollDir());
     }
   }
 }
@@ -3889,23 +3991,17 @@ let MD = null;
 hud.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   const kind = onDown(e.clientX, e.clientY);
-  if (kind === 'play') MD = { x0: e.clientX, y0: e.clientY, ax: ship.tx, ay: ship.ty, hist: [[performance.now(), e.clientX, e.clientY]] };
+  if (kind === 'play') MD = { x0: e.clientX, y0: e.clientY, ax: ship.tx, ay: ship.ty };
   else if (kind === 'boost') MD = null;
 });
 hud.addEventListener('mousemove', e => {
   if (!MD || G.state !== 'game' || G.paused) return;
-  const now = performance.now();
-  MD.hist.push([now, e.clientX, e.clientY]);
-  while (MD.hist.length > 2 && now - MD.hist[0][0] > 160) MD.hist.shift();
   const f = CFG.DRAG * SENSF[D.sens] * (300 / Math.min(cw, ch));
-  ship.tx = clamp(MD.ax + (e.clientX - MD.x0) * f, -SB.x, SB.x);
-  ship.ty = clamp(MD.ay + (e.clientY - MD.y0) * f, SB.y0, SB.y1);
-  const h0 = MD.hist[0], dx = e.clientX - h0[1], dy = e.clientY - h0[2];
-  if (Math.abs(dx) >= 76 && Math.abs(dx) > 2.1 * Math.abs(dy) && ship.rollCd <= 0) {
-    doRoll(dx > 0 ? 1 : -1);
-    MD.hist = [[now, e.clientX, e.clientY]];
-    MD.x0 = e.clientX; MD.y0 = e.clientY; MD.ax = ship.tx; MD.ay = ship.ty;
-  }
+  const rx = e.clientX - MD.x0, ry = e.clientY - MD.y0;
+  const dx = Math.abs(rx) <= 4 ? 0 : rx - 4 * Math.sign(rx);
+  const dy = Math.abs(ry) <= 4 ? 0 : ry - 4 * Math.sign(ry);
+  ship.tx = clamp(MD.ax + dx * f, -SB.x, SB.x);
+  ship.ty = clamp(MD.ay + dy * f, SB.y0, SB.y1);
 });
 window.addEventListener('mouseup', () => { MD = null; });
 window.addEventListener('keydown', e => {
@@ -3921,11 +4017,16 @@ window.addEventListener('keydown', e => {
     if (G.state === 'title') { startRun(); return; }
     if (G.state === 'card') { continueCard(); return; }
     if (G.state === 'over') { retryOver(); return; }
-    if (G.state === 'game' && k === ' ') { doNova(); return; }
+    if (G.state === 'game' && k === ' ') { // 5.1: SPACE = barrel roll, A/D biases direction
+      doRoll(keys.has('a') || keys.has('ArrowLeft') ? -1
+        : keys.has('d') || keys.has('ArrowRight') ? 1 : autoRollDir());
+      return;
+    }
   }
   if (G.state === 'game') {
-    if (k === 'q' || k === 'Q') doRoll(-1);
+    if (k === 'q' || k === 'Q') doRoll(-1); // directional rolls stay for those who found them
     if (k === 'e' || k === 'E') doRoll(1);
+    if (k === 'n' || k === 'N') doNova();   // desktop nova (button works too)
   }
   keys.add(k.length === 1 ? k.toLowerCase() : k);
 });
@@ -3982,7 +4083,12 @@ const VLGL = {
       ally: G.ally ? G.ally.state : null, chain: G.chainN, aimHot: G.aimHot,
       fps: +(1000 / emaDt).toFixed(1), scale: +renderScale.toFixed(2),
       inst: !!extInst, neb: nebReady, planet: planetReady, glErr: lastGlErr, glLost,
-      sens: D.sens, mute: !!D.mute };
+      sens: D.sens, mute: !!D.mute,
+      x: +ship.x.toFixed(1), y: +ship.y.toFixed(1), tx: +ship.tx.toFixed(1), ty: +ship.ty.toFixed(1),
+      bank: +ship.bank.toFixed(3), pitch: +ship.pitch.toFixed(3),
+      rolls: rollsN, rollDir: ship.rollDir, rollCd: +ship.rollCd.toFixed(2),
+      boostK: +G.boostK.toFixed(2), retX: +G.retX.toFixed(1), retY: +G.retY.toFixed(1),
+      ui: { bb: G.bb, kb: G.kb, nr: G.nr, pr: G.pr } };
   },
   setS(s){
     if (G.state !== 'game') { startRun(); }
