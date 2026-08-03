@@ -326,24 +326,47 @@ function prepPlanet(i, im){ // aspect-preserving fit into the square planet slot
   PAINT.planet[i] = c;
   if (ART.planet[i]) ART.planet[i] = c;
 }
-function prepShip(im){ // 3.0 chase-cam: REAR 3/4 view — burners toward camera, barely the top.
-  // Fit by WIDTH (the sprite is short/wide now); ~15% smaller silhouette than
-  // the old top-down bake — it reads heavier from behind.
+function alphaBox(im){ // 4.2: alpha bbox of a painted view, as fractions of the image box.
+  // The packer alpha-trimmed each ship view differently, so fitting by IMAGE size gave
+  // each view its own effective scale/center — the source of the bank pop. Measured on
+  // a 96px proxy: plenty for a bbox, negligible at boot.
+  const S = 96 / Math.max(im.width, im.height);
+  const w = Math.max(2, Math.round(im.width * S)), h = Math.max(2, Math.round(im.height * S));
+  const c = mkCanvas(w, h), g = c.getContext('2d');
+  g.drawImage(im, 0, 0, w, h);
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  try {
+    const d = g.getImageData(0, 0, w, h).data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++)
+      if (d[(y * w + x) * 4 + 3] > 24) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+  } catch (e) {}
+  if (x1 < 0) return { cx: .5, cy: .5, w: 1, h: 1 };
+  return { cx: (x0 + x1 + 1) / 2 / w, cy: (y0 + y1 + 1) / 2 / h,
+    w: (x1 - x0 + 1) / w, h: (y1 - y0 + 1) / h };
+}
+function prepShipView(im){ // 4.2: ONE fit rule for all three painted views —
+  // hull alpha-bbox spans a common 29-unit width, bbox center lands on a common
+  // visual center. Swapping/blending views can no longer pop scale or position.
   const B = SHIP_SPR.box, S = SHIP_SPR.px, N = B * 2 * S;
   const c = mkCanvas(N, N), g = c.getContext('2d');
-  const W = 30, H = W * im.height / im.width;
+  const bb = alphaBox(im);
+  let W = 29 / Math.max(.2, bb.w), H = W * im.height / im.width;
+  const fit = Math.min(1, 36 / Math.max(1, H * bb.h)); // never overflow the sprite box
+  W *= fit; H *= fit;
   g.translate(N / 2, N / 2); g.scale(S, S);
-  g.drawImage(im, -W / 2, -H / 2 - 1, W, H); // slight up bias: burners sit low, near the plume
-  PAINT.ship = c;
+  g.drawImage(im, -W * bb.cx, -H * bb.cy - .75, W, H); // slight up bias: burners sit low
+  return c;
+}
+function prepShip(im){ // 3.0 chase-cam: REAR 3/4 view — burners toward camera, barely the top.
+  PAINT.ship = prepShipView(im);
   for (const k in PREV) delete PREV[k]; // hangar previews re-bake over the painted base
   ART.ally = null; bakeShipArt(); // re-bake player (skin tint) + ally over the painted base
 }
-function prepShipBank(dir, im){ // 4.0: painted banked views — same box/fit pipeline as the rear view
-  const B = SHIP_SPR.box, S = SHIP_SPR.px, N = B * 2 * S;
-  const c = mkCanvas(N, N), g = c.getContext('2d');
-  const W = 33, H = W * im.height / im.width; // banked silhouette reads a touch wider
-  g.translate(N / 2, N / 2); g.scale(S, S);
-  g.drawImage(im, -W / 2, -H / 2 - .5, W, H);
+function prepShipBank(dir, im){ // 4.0: painted banked views — same normalized pipeline
+  const c = prepShipView(im);
   if (dir < 0) PAINT.shipL = c; else PAINT.shipR = c;
   ART.ally = null; bakeShipArt(); // re-bake the trio through the skin-tint pass
 }
@@ -710,6 +733,41 @@ function shipPreview(i){
   }
   return c;
 }
+function bakeBankStrip(){ // 4.2: 9-frame rear↔bank tween strip, baked from the TINTED trio
+  // (skin tints + hit-flash whites therefore apply across every frame for free).
+  // Interior frames: cross-blend + skew — both layers are pre-transformed to the SAME
+  // apparent roll (rear rolls toward the bank pose, the bank view un-rolls toward flat),
+  // then crossfaded, so the blend never double-exposes. Frame 4 = rear, 0/8 = full L/R.
+  const B = SHIP_SPR.box, S = SHIP_SPR.px, N = B * 2 * S;
+  const strip = [], white = [];
+  for (let k = 0; k <= 8; k++) {
+    const t = Math.abs(k - 4) / 4, sgn = k < 4 ? -1 : 1;
+    let c;
+    if (t === 0) c = ART.ship;
+    else if (t === 1) c = sgn < 0 ? ART.shipL : ART.shipR;
+    else {
+      const tmp = mkCanvas(N, N), g = tmp.getContext('2d');
+      const tt = t * t * (3 - 2 * t); // smoothstep crossfade weight
+      g.translate(N / 2, N / 2);
+      g.save(); // rear layer, rolled toward the bank pose
+      g.rotate(sgn * .52 * t); g.scale(1 - .16 * t, 1 - .03 * t);
+      g.globalAlpha = 1 - tt * tt;
+      g.drawImage(ART.ship, -N / 2, -N / 2);
+      g.restore();
+      g.save(); // bank layer, un-rolled back toward flat (native pose ≈ .52 rad, .84 squash)
+      g.rotate(sgn * .52 * (t - 1)); g.scale((1 - .16 * t) / .84, (1 - .03 * t) / .97);
+      g.globalAlpha = tt;
+      g.drawImage(sgn < 0 ? ART.shipL : ART.shipR, -N / 2, -N / 2);
+      g.restore();
+      // re-solidify: the crossfade leaves the hull slightly translucent — double-draw
+      c = mkCanvas(N, N);
+      const g2 = c.getContext('2d');
+      g2.drawImage(tmp, 0, 0); g2.drawImage(tmp, 0, 0);
+    }
+    strip.push(c); white.push(spriteWhite(c));
+  }
+  ART.strip = strip; ART.stripW = white;
+}
 function bakeShipArt(){
   const sk = SKINS[D.skin];
   const hull = sk.prism ? '#F2F2FF' : sk.hull;
@@ -719,6 +777,7 @@ function bakeShipArt(){
   ART.shipL = bakeShipInto(hull, trim, gl, 'L'); // 4.0: banked trio, one tint pipeline
   ART.shipR = bakeShipInto(hull, trim, gl, 'R');
   ART.shipW = { C: spriteWhite(ART.ship), L: spriteWhite(ART.shipL), R: spriteWhite(ART.shipR) };
+  bakeBankStrip(); // 4.2: tween strip re-bakes with the trio (boot / skin change / art decode)
   if (!ART.ally) ART.ally = bakeShipInto('#F1E9D2', '#FFD24A', false);
 }
 function bakeFoeSprite(kind, p){
@@ -1147,6 +1206,21 @@ function pox(z){ // path lateral offset lookup (skim floor shares the entity fra
   if (i < 0) i = 0; else if (i > PT.n - .001) i = PT.n - .001;
   const i0 = i | 0;
   return PT.x[i0] + (PT.x[i0 + 1] - PT.x[i0]) * (i - i0);
+}
+function poy(z){ // vertical path offset (incl. skim dive/climb slope), same table
+  if (!PT.on) return 0;
+  let i = (z - PT.z0) * PT.inv;
+  if (i < 0) i = 0; else if (i > PT.n - .001) i = PT.n - .001;
+  const i0 = i | 0;
+  return PT.y[i0] + (PT.y[i0 + 1] - PT.y[i0]) * (i - i0);
+}
+function PS(x, y, z){ // 4.2: STRAIGHT projection — the frozen camera frame for
+  // in-flight projectiles. Path curvature bends scenery, spawn points and the
+  // camera — never a bolt already in the air. Same camera pan/zoom as P().
+  const s = FOVE / Math.max(z, 26);
+  PRJ.x = vpx + cam.ox + (x - cam.x) * s;
+  PRJ.y = vpy + cam.oy + (y - cam.y) * s;
+  PRJ.s = s; return PRJ;
 }
 const mapU = u => u * EBB.x;
 const mapV = v => lerp(EBB.y0, EBB.y1, (v + 1) / 2);
@@ -1583,6 +1657,12 @@ const RL = [];
 
 function spawnBolt(x, y, z, tx, ty, spd, col, r){
   const b = bolts.get(); if (!b) return null;
+  // 4.2 FROZEN FRAME: bolts live in the straightened camera frame. The corridor-frame
+  // muzzle converts to camera space ONCE at spawn (offset is zero at the ship plane, so
+  // the target coords already are camera space); the ray is computed once and never
+  // re-bent — a bolt crosses the ship plane at exactly (tx,ty), same as before, but its
+  // flight is a dead-straight line on screen no matter how hard the corridor bends.
+  x += pox(z); y += poy(z);
   let dx = tx - x, dy = ty - y, dz = CFG.SHIP_Z - z;
   const m = Math.hypot(dx, dy, dz) || 1;
   b.x = x; b.y = y; b.z = z; b.pz = z;
@@ -1883,7 +1963,8 @@ const TRAIL = [];
 function resetShip(){
   ship.x = ship.tx = 0; ship.y = ship.ty = SB.y1 * .5;
   ship.bank = 0; ship.roll = 0; ship.rollCd = 0; ship.inv = 2.2; ship.alive = true;
-  ship.fireT = .1; TRAIL.length = 0;
+  ship.fireT = .1; ship.vb = 0; TRAIL.length = 0;
+  BANK.f = 4; BANK.gT = 0; // 4.2: bank strip re-centers with the hull
 }
 function doRoll(dir){
   if (ship.rollCd > 0 || !ship.alive || G.state !== 'game' || G.paused) return;
@@ -1899,7 +1980,7 @@ function doNova(){
   A.novaS(); haptic('heavy');
   for (let i = 0; i < bolts.length; i++) {
     const b = bolts[i];
-    if (b.on && !b.defl) { spark(b.x, b.y, b.z, '#FFE9A8', 4, 120); b.on = false; }
+    if (b.on && !b.defl) { spark(b.x - pox(b.z), b.y - poy(b.z), b.z, '#FFE9A8', 4, 120); b.on = false; }
   }
   for (let i = foes.length - 1; i >= 0; i--) dmgFoe(foes[i], 6, false);
   if (G.boss) bossNova();
@@ -2077,29 +2158,45 @@ function drawShipShape(x, y, sc, rot, ski, detail){
   ctx.restore();
 }
 const GH = []; // barrel-roll motion-blur ghosts
+// 4.2: continuous bank stepper — smoothed lateral velocity maps onto the 9-frame strip.
+// Hysteresis band: a frame flips only when the target clears it by ±.68, so the flip-back
+// threshold sits 1.36 frames away — micro-corrections can never flicker two frames.
+const BANK = { f: 4, gf: 4, gT: 0 };
+function bankFrame(vb){
+  const v = Math.abs(vb) < .06 ? 0 : vb;         // dead-center stays rock solid
+  const ft = clamp(4 + v * 5.1, 0, 8);           // |vb| ≈ .78 → full bank frame
+  const d = ft - BANK.f;
+  if (Math.abs(d) > .68) {
+    const step = d > 0 ? Math.min(2, Math.ceil(d - .68)) : Math.max(-2, -Math.ceil(-d - .68));
+    if (Math.abs(d) > 1.7) { BANK.gf = BANK.f; BANK.gT = G.rt + .07; } // fast swing → blur ghost
+    BANK.f = clamp(BANK.f + step, 0, 8);
+  }
+  return BANK.f;
+}
 function drawShipSprite(x, y, sc, rot, rollP, alpha, vb){
-  const B = SHIP_SPR.box, D2 = B * 2 * sc;
+  const B = SHIP_SPR.box, D2 = B * 2 * sc, ST = ART.strip;
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
   // chase-cam 3D sell: slight horizontal skew with bank
   ctx.transform(1, 0, clamp(-rot * .5, -.3, .3), 1, 0, 0);
-  let img = ART.ship, wimg = ART.shipW && ART.shipW.C, bimg = null, bk = 0;
-  if (rollP > 0) { // barrel roll cycles bankL → rear → bankR through the spin
+  let fi = 4;
+  if (rollP > 0) { // barrel roll cycles the WHOLE strip through the spin
     const ph = Math.sin(rollP * TAU * (ship.rollDir || 1));
-    if (ph > .38 && ART.shipR) { img = ART.shipR; wimg = ART.shipW && ART.shipW.R; }
-    else if (ph < -.38 && ART.shipL) { img = ART.shipL; wimg = ART.shipW && ART.shipW.L; }
+    fi = clamp(Math.round(4 + ph * 4), 0, 8);
     let sx = Math.cos(rollP * TAU);
     if (Math.abs(sx) < .07) sx = sx < 0 ? -.07 : .07;
     ctx.scale(Math.abs(sx) * .45 + .55, 1 - .1 * Math.sin(rollP * Math.PI)); // softened — the frames carry the roll
-  } else if (vb !== undefined && vb !== 0) { // lateral-velocity crossfade into the banked views
-    bk = clamp((Math.abs(vb) - .3) / .5, 0, 1);
-    if (bk > 0) { bimg = vb > 0 ? ART.shipR : ART.shipL; if (!bimg) bk = 0; }
+  } else if (vb !== undefined) fi = bankFrame(vb); // hysteresis-stepped strip index
+  const img = ST ? ST[fi] : ART.ship;
+  const wimg = ST ? ART.stripW[fi] : (ART.shipW && ART.shipW.C);
+  if (rollP <= 0 && ST && BANK.gT > G.rt && BANK.gf !== fi) { // fast-transition motion-blur ghost
+    ctx.globalAlpha = alpha * clamp((BANK.gT - G.rt) / .07, 0, 1) * .38;
+    ctx.drawImage(ST[BANK.gf], -B * sc, -B * sc, D2, D2);
   }
-  ctx.globalAlpha = alpha * (1 - bk * .92);
+  ctx.globalAlpha = alpha;
   if (img) ctx.drawImage(img, -B * sc, -B * sc, D2, D2);
-  if (bk > 0) { ctx.globalAlpha = alpha * bk; ctx.drawImage(bimg, -B * sc, -B * sc, D2, D2); }
-  if (ship.flash > 0 && wimg) { // white hit-flash, same pipeline as everything else
+  if (ship.flash > 0 && wimg) { // white hit-flash, baked per strip frame
     ctx.globalAlpha = alpha * clamp(ship.flash * 7, 0, .9);
-    ctx.drawImage(bk > .5 && ART.shipW ? (vb > 0 ? ART.shipW.R : ART.shipW.L) : wimg, -B * sc, -B * sc, D2, D2);
+    ctx.drawImage(wimg, -B * sc, -B * sc, D2, D2);
   }
   ctx.restore(); ctx.globalAlpha = 1;
 }
@@ -2211,7 +2308,7 @@ function drawShipEnt(){
     const hot = G.aimHot, blinkR = hot && ((G.rt * 8) | 0) % 2 === 0;
     for (const far of [false, true]) {
       const rz = far ? CFG.CONV_Z : CFG.CONV_Z * .42;
-      P(ship.x, ship.y + 2, rz);
+      PS(ship.x, ship.y + 2, rz); // 4.2: lasers fly straight — the reticle marks the real ray
       const r = (far ? 10.5 : 16) * tight;
       const col = far && blinkR ? '#FF5E7A' : rc;
       ctx.strokeStyle = col; ctx.lineWidth = far && hot ? 2 : 1.3;
@@ -3095,14 +3192,23 @@ function drop(type, x, y, z){
       G.shieldBudget--;
     }
   }
+  const pz2 = z === undefined ? CFG.SPAWN_Z : z;
+  // 4.2 FROZEN FRAME: an in-flight pickup is a straight 3D ray in the camera frame —
+  // from its bent spawn point to its corridor (x,y) at the ship plane. sx/sy are the
+  // per-depth slopes baked ONCE at spawn; a line in 3D projects to a line on screen,
+  // so the drop never inherits path curvature while staying exactly as catchable.
+  const zs = Math.max(90, pz2 - CFG.SHIP_Z);
   picks.push({ k:'k', kind: type, x: x === undefined ? mapU(rnd(-.6, .6)) : x,
-    y: y === undefined ? mapV(rnd(-.5, .5)) : y, z: z === undefined ? CFG.SPAWN_Z : z,
+    y: y === undefined ? mapV(rnd(-.5, .5)) : y, z: pz2,
+    sx: pox(pz2) / zs, sy: poy(pz2) / zs,
     vx: 0, vy: 0, ph: rnd(TAU) });
 }
 function updPicks(dt){
   for (let i = picks.length - 1; i >= 0; i--) {
     const p = picks[i]; p.z -= G.spd * .85 * dt;
-    if (p.z < 480 && d2(p.x, p.y, ship.x, ship.y) < 130 * 130) {
+    // magnet reads the CAMERA-frame position — the drop that looks close gets pulled
+    const mgx = p.x + (p.sx || 0) * (p.z - CFG.SHIP_Z), mgy = p.y + (p.sy || 0) * (p.z - CFG.SHIP_Z);
+    if (p.z < 480 && d2(mgx, mgy, ship.x, ship.y) < 130 * 130) {
       p.x += (ship.x - p.x) * dt * 4; p.y += (ship.y - p.y) * dt * 4;
     }
     if (p.z <= CFG.SHIP_Z + 30 && p.z > CFG.SHIP_Z - 60 && ship.alive &&
@@ -3138,7 +3244,9 @@ function updPicks(dt){
   }
 }
 function drawPick(p){
-  P(p.x, p.y, p.z); const x = PRJ.x, y = PRJ.y, s = PRJ.s;
+  // 4.2: straight camera-frame ray — corridor destination + frozen spawn slope
+  PS(p.x + (p.sx || 0) * (p.z - CFG.SHIP_Z), p.y + (p.sy || 0) * (p.z - CFG.SHIP_Z), p.z);
+  const x = PRJ.x, y = PRJ.y, s = PRJ.s;
   const col = p.kind === 'shield' ? '#3BE8D2' : p.kind === 'cell' ? CELL_C : '#FFE9A8';
   const r = 15 * s * (1 + .12 * Math.sin(G.rt * 5 + p.ph));
   const g = glow(col), gd = r * 3.4;
@@ -3362,15 +3470,17 @@ function updBolts(dt){
     b.t += dt; b.pz = b.z;
     b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
     if (b.defl) {
+      // bolt is camera-frame; foes/boss are corridor-frame — convert once per bolt
+      const cbx = b.x - pox(b.z), cby = b.y - poy(b.z);
       for (let j = foes.length - 1; j >= 0; j--) {
         const f = foes[j];
         if (f.kind === 'phantom' && f.visP < .65) continue;
-        if (f.delay <= 0 && Math.abs(f.z - b.z) < 90 && d2(f.x, f.y, b.x, b.y) < (f.r + 14) * (f.r + 14)) {
+        if (f.delay <= 0 && Math.abs(f.z - b.z) < 90 && d2(f.x, f.y, cbx, cby) < (f.r + 14) * (f.r + 14)) {
           dmgFoe(f, 1, false); b.on = false; break;
         }
       }
-      if (b.on && G.boss && Math.abs(G.boss.z - b.z) < 120 && d2(G.boss.x, G.boss.y, b.x, b.y) < 170 * 170) {
-        bossDeflHit(); spark(b.x, b.y, b.z, '#FFFFFF', 4, 120); b.on = false;
+      if (b.on && G.boss && Math.abs(G.boss.z - b.z) < 120 && d2(G.boss.x, G.boss.y, cbx, cby) < 170 * 170) {
+        bossDeflHit(); spark(cbx, cby, b.z, '#FFFFFF', 4, 120); b.on = false;
       }
       if (b.z > 2900 || b.t > 4) b.on = false;
       continue;
@@ -3385,7 +3495,7 @@ function updBolts(dt){
   }
 }
 function drawBolt(b){
-  P(b.x, b.y, b.z); const x = PRJ.x, y = PRJ.y, s = PRJ.s;
+  PS(b.x, b.y, b.z); const x = PRJ.x, y = PRJ.y, s = PRJ.s; // frozen frame — never re-bent
   const r = Math.max(2.4, b.r * s * 1.05);
   const g = glow(b.col), gd = r * 5;
   ctx.globalCompositeOperation = 'lighter';
@@ -3399,17 +3509,20 @@ function updLasers(dt){
     const l = lasers[i]; if (!l.on) continue;
     l.pz = l.z; l.z += l.vz * dt; l.x += (l.vx || 0) * dt;
     let consumed = false;
+    // 4.2: lasers fly straight in the camera frame — convert to the corridor frame
+    // once per laser for hit tests (WYSIWYG: you hit what the reticle covers)
+    const clx = l.x - pox(l.z), cly = l.y - poy(l.z);
     // foes
     for (let j = foes.length - 1; j >= 0; j--) {
       const f = foes[j];
       if (f.delay > 0 || f.z < l.pz - 40 || f.z > l.z + 40) continue;
       if (f.kind === 'phantom' && f.visP < .65) continue; // not really there — lasers pass through
       const rr2 = f.r + 13;
-      if (d2(f.x, f.y, l.x, l.y) < rr2 * rr2) {
+      if (d2(f.x, f.y, clx, cly) < rr2 * rr2) {
         // breaker armor shrugs L1 bolts — needs L2+, sustained fire, or deflects
         const dmg = f.kind === 'breaker' && G.laser < 2 ? .5 : 1;
         dmgFoe(f, dmg, !l.ally);
-        spark(l.x, l.y, f.z, f.kind === 'breaker' && dmg < 1 ? PAL.obE : '#FFFFFF', 3, 120);
+        spark(clx, cly, f.z, f.kind === 'breaker' && dmg < 1 ? PAL.obE : '#FFFFFF', 3, 120);
         consumed = true; break;
       }
     }
@@ -3419,8 +3532,8 @@ function updLasers(dt){
   }
 }
 function drawLaser(l){
-  P(l.x, l.y, l.z); const x1 = PRJ.x, y1 = PRJ.y, s = PRJ.s;
-  P(l.x, l.y, Math.max(l.z - 130, CFG.SHIP_Z + 6));
+  PS(l.x, l.y, l.z); const x1 = PRJ.x, y1 = PRJ.y, s = PRJ.s; // frozen frame — dead straight
+  PS(l.x, l.y, Math.max(l.z - 130, CFG.SHIP_Z + 6));
   ctx.globalCompositeOperation = 'lighter';
   ctx.strokeStyle = l.col; ctx.lineCap = 'round';
   ctx.lineWidth = Math.max(2, 6 * s);
@@ -3569,10 +3682,12 @@ function bossDamage(n, byLaser){
 function bossHitLaser(l){
   const b = G.boss; if (!b) return false;
   if (!(l.pz < b.z + 60 && l.z > b.z - 60)) return false;
-  const dx = l.x - b.x, dy = l.y - b.y, byMe = !l.ally; // ally fire never pads the accuracy stat
+  // 4.2: laser flies straight in the camera frame — corridor-frame coords for the hit test
+  const clx = l.x - pox(l.z), cly = l.y - poy(l.z);
+  const dx = clx - b.x, dy = cly - b.y, byMe = !l.ally; // ally fire never pads the accuracy stat
   if (b.kind === 0) {
     for (const p of b.pods) { // pods are targets in every phase (P2 regrows two)
-      if (p.on && d2(l.x, l.y, b.x + p.dx, b.y + p.dy) < 40 * 40) {
+      if (p.on && d2(clx, cly, b.x + p.dx, b.y + p.dy) < 40 * 40) {
         p.hp--; b.flash = .08; if (byMe) G.st.hits++;
         spark(b.x + p.dx, b.y + p.dy, b.z, '#FFFFFF', 4, 140); A.hitS();
         if (p.hp <= 0) {
@@ -3588,39 +3703,39 @@ function bossHitLaser(l){
         return true;
       }
     }
-    if (b.phase >= 1 && d2(l.x, l.y, b.x, b.y + 4) < 38 * 38) {
-      bossDamage(1, byMe); spark(l.x, l.y, b.z, '#FFFFFF', 3, 130); A.hitS(); return true;
+    if (b.phase >= 1 && d2(clx, cly, b.x, b.y + 4) < 38 * 38) {
+      bossDamage(1, byMe); spark(clx, cly, b.z, '#FFFFFF', 3, 130); A.hitS(); return true;
     }
-    if (Math.abs(dx) < 180 && Math.abs(dy) < 62) { spark(l.x, l.y, b.z, PAL.obE, 2, 90); return true; }
+    if (Math.abs(dx) < 180 && Math.abs(dy) < 62) { spark(clx, cly, b.z, PAL.obE, 2, 90); return true; }
   } else if (b.kind === 1) {
     const dd = Math.hypot(dx, dy);
-    if (dd < 42) { bossDamage(1, byMe); spark(l.x, l.y, b.z, '#FFFFFF', 3, 130); A.hitS(); return true; }
+    if (dd < 42) { bossDamage(1, byMe); spark(clx, cly, b.z, '#FFFFFF', 3, 130); A.hitS(); return true; }
     if (dd > 130 - 17 && dd < 130 + 17) {
       let ang = Math.atan2(dy, dx) - b.rot;
       ang = ((ang % TAU) + TAU) % TAU;
       for (const pc of b.plates) {
         let da = Math.abs(ang - pc); if (da > Math.PI) da = TAU - da;
-        if (da < b.arc / 2) { spark(l.x, l.y, b.z, PAL.foeA, 2, 90); return true; }
+        if (da < b.arc / 2) { spark(clx, cly, b.z, PAL.foeA, 2, 90); return true; }
       }
     }
   } else if (b.kind === 2) {
     const dd = Math.hypot(dx, dy);
     if (b.eye > .5 && dd < 46) {
-      bossDamage(1, byMe); spark(l.x, l.y, b.z, '#FFFFFF', 3, 130); A.hitS(); return true;
+      bossDamage(1, byMe); spark(clx, cly, b.z, '#FFFFFF', 3, 130); A.hitS(); return true;
     }
-    if (dd < 175) { spark(l.x, l.y, b.z, PAL.obE, 2, 80); return true; }
+    if (dd < 175) { spark(clx, cly, b.z, PAL.obE, 2, 80); return true; }
   } else if (b.kind === 3) {
     if (b.cloakP > .5) return false; // cloaked: not really there — lasers sail through
     const dd = Math.hypot(dx, dy);
     if (dd < 52) {
-      bossDamage(1, byMe); spark(l.x, l.y, b.z, '#FFFFFF', 3, 130); A.hitS(); return true;
+      bossDamage(1, byMe); spark(clx, cly, b.z, '#FFFFFF', 3, 130); A.hitS(); return true;
     }
     if (Math.abs(dx) < 200 && Math.abs(dy) < 80) { // veil wings absorb
-      spark(l.x, l.y, b.z, '#B78CFF', 2, 90); return true;
+      spark(clx, cly, b.z, '#B78CFF', 2, 90); return true;
     }
   } else { // THE SOVEREIGN
     for (const p of b.turs) { // filigree turret arrays — destructible, like pods
-      if (p.on && d2(l.x, l.y, b.x + p.dx, b.y + p.dy) < 36 * 36) {
+      if (p.on && d2(clx, cly, b.x + p.dx, b.y + p.dy) < 36 * 36) {
         p.hp--; b.flash = .08; if (byMe) G.st.hits++;
         spark(b.x + p.dx, b.y + p.dy, b.z, '#FFE9A8', 4, 140); A.hitS();
         if (p.hp <= 0) {
@@ -3636,10 +3751,10 @@ function bossHitLaser(l){
         return true;
       }
     }
-    if (b.phase >= 1 && d2(l.x, l.y, b.x, b.y + 2) < 40 * 40) {
-      bossDamage(1, byMe); spark(l.x, l.y, b.z, '#FFFFFF', 3, 130); A.hitS(); return true;
+    if (b.phase >= 1 && d2(clx, cly, b.x, b.y + 2) < 40 * 40) {
+      bossDamage(1, byMe); spark(clx, cly, b.z, '#FFFFFF', 3, 130); A.hitS(); return true;
     }
-    if (Math.abs(dx) < 210 && Math.abs(dy) < 84) { spark(l.x, l.y, b.z, '#C0A050', 2, 90); return true; }
+    if (Math.abs(dx) < 210 && Math.abs(dy) < 84) { spark(clx, cly, b.z, '#C0A050', 2, 90); return true; }
   }
   return false;
 }
@@ -3959,7 +4074,7 @@ function bossDie(){
   for (let i = 1; i <= 6; i++)
     after(i * .16, ((bx, by, bz) => () => boom(bx + rnd(-120, 120), by + rnd(-60, 60), bz, pick([PAL.foeA, '#FFD24A', '#FFFFFF']), i % 2 === 0))(b.x, b.y, b.z));
   for (let i = 0; i < bolts.length; i++)
-    if (bolts[i].on && !bolts[i].defl) { spark(bolts[i].x, bolts[i].y, bolts[i].z, '#FFE9A8', 3, 100); bolts[i].on = false; }
+    if (bolts[i].on && !bolts[i].defl) { spark(bolts[i].x - pox(bolts[i].z), bolts[i].y - poy(bolts[i].z), bolts[i].z, '#FFE9A8', 3, 100); bolts[i].on = false; }
   G.boss = null; G.bossOn = false; G.sirenWalls = 0;
   A.mode = 'run';
   after(1.1, startOutro); // 4.0: victory roll + punch-ahead, then the results card
@@ -4644,9 +4759,10 @@ function updEcho(dt){
 function echoHitLaser(l){
   const e = G.echo; if (!e) return false;
   if (!(l.pz < e.z + 60 && l.z > e.z - 60)) return false;
-  if (d2(l.x, l.y, e.x, e.y) > 75 * 75) return false;
+  const clx = l.x - pox(l.z), cly = l.y - poy(l.z); // 4.2: camera-frame laser → corridor test
+  if (d2(clx, cly, e.x, e.y) > 75 * 75) return false;
   e.hp--; e.flash = .1; G.st.hits++;
-  spark(l.x, l.y, e.z, '#FFFFFF', 3, 120); A.hitS();
+  spark(clx, cly, e.z, '#FFFFFF', 3, 120); A.hitS();
   if (e.hp <= 0) {
     addScore(SCORES.echo, e.x, e.y, e.z, true);
     D.echoes = (D.echoes | 0) + 1;
@@ -4655,7 +4771,7 @@ function echoHitLaser(l){
     for (let i = 1; i <= 4; i++)
       after(i * .14, ((bx, by, bz) => () => boom(bx + rnd(-80, 80), by + rnd(-40, 40), bz, pick(['#B78CFF', '#FFD24A', '#FFFFFF']), i % 2 === 0))(e.x, e.y, e.z));
     for (let i = 0; i < bolts.length; i++)
-      if (bolts[i].on && !bolts[i].defl) { spark(bolts[i].x, bolts[i].y, bolts[i].z, '#FFE9A8', 3, 100); bolts[i].on = false; }
+      if (bolts[i].on && !bolts[i].defl) { spark(bolts[i].x - pox(bolts[i].z), bolts[i].y - poy(bolts[i].z), bolts[i].z, '#FFE9A8', 3, 100); bolts[i].on = false; }
     banner('ECHO DOWN', '+' + SCORES.echo, '#B78CFF', 1.6);
     haptic('success'); A.boomB();
     G.echo = null; G.waveT = 2.2;
@@ -4870,11 +4986,12 @@ function updGame(dt, rdt){
       if (f.delay > 0 || f.z > CFG.CONV_Z * 1.4 || f.z < CFG.SHIP_Z + 60) continue;
       if (f.kind === 'phantom' && f.visP < .65) continue;
       const rr2 = f.r + 16;
-      if (Math.abs(f.x - ship.x) < rr2 && Math.abs(f.y - ship.y) < rr2) { G.aimHot = true; break; }
+      // 4.2: camera-frame compare — the blink means the straight ray really connects
+      if (Math.abs(f.x + pox(f.z) - ship.x) < rr2 && Math.abs(f.y + poy(f.z) - ship.y) < rr2) { G.aimHot = true; break; }
     }
     if (!G.aimHot && G.boss && G.boss.z < CFG.CONV_Z * 1.7 &&
-        Math.abs(G.boss.x - ship.x) < 130 && Math.abs(G.boss.y - ship.y) < 95) G.aimHot = true;
-    if (!G.aimHot && G.echo && Math.abs(G.echo.x - ship.x) < 80 && Math.abs(G.echo.y - ship.y) < 60) G.aimHot = true;
+        Math.abs(G.boss.x + pox(G.boss.z) - ship.x) < 130 && Math.abs(G.boss.y + poy(G.boss.z) - ship.y) < 95) G.aimHot = true;
+    if (!G.aimHot && G.echo && Math.abs(G.echo.x + pox(G.echo.z) - ship.x) < 80 && Math.abs(G.echo.y + poy(G.echo.z) - ship.y) < 60) G.aimHot = true;
   }
   // ── 4.0 camera: critically-damped springs — the ship shifts within the frame ──
   const tcx = ship.x * CFG.CAMF, tcy = ship.y * CFG.CAMF;
