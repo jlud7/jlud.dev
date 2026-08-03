@@ -5827,6 +5827,12 @@ window.__vl = {
   // ── 4.0 QA hooks ──
   boost(sec2){ G.qaBoost = +sec2 || 2; return this.state(); },
   rings(){ try { spawnRingChain(); return RINGS.length; } catch (e) { return 'ERR:' + e; } },
+  arch(){ // QA: drop a skim gateway arch dead ahead (screenshot rig)
+    try {
+      obs.push({ k: 'o', kind: 'sarch', x: mapU(0), y: mapV(-.05), z: CFG.OB_Z, R: 92, passed: false, on2: true });
+      return obs.length;
+    } catch (e) { return 'ERR:' + e; }
+  },
   bend(){ // force a hard S right ahead of the ship (screenshot / aim-truth rig)
     try {
       if (G.state !== 'game') { startRun(); G.intro = 0; }
