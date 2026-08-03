@@ -1269,9 +1269,13 @@ function bakeTerrainTex(si){
 function ensureTerr(si){
   if (TERR[si]) return TERR[si];
   const base = PAINT.terrain[si] || ART.terrain[si] || (ART.terrain[si] = bakeTerrainTex(si));
-  const mkT = (tw) => { // 8-tile-wide strip: one drawImage per floor slice, wrap-safe
-    const c = mkCanvas(tw * 8, tw), g = c.getContext('2d');
-    for (let k2 = 0; k2 < 8; k2++) g.drawImage(base, k2 * tw, 0, tw, tw);
+  const mkT = (tw) => { // 8-wide × 2-tall strip: one drawImage per floor slice, and a
+    // slice's source band can never wrap mid-read — no more seam banding (4.1)
+    const c = mkCanvas(tw * 8, tw * 2), g = c.getContext('2d');
+    for (let k2 = 0; k2 < 8; k2++) {
+      g.drawImage(base, k2 * tw, 0, tw, tw);
+      g.drawImage(base, k2 * tw, tw, tw, tw);
+    }
     return c;
   };
   TERR[si] = { hi: mkT(512), lo: mkT(224), hiW: 512, loW: 224 };
@@ -1777,31 +1781,96 @@ function updDecor(dt){
     if (LT.on > 0) LT.on -= dt;
   }
 }
+/* 4.1: painted-style deco bakes — the flat panel/hulk primitives now carry
+   gradient faces, rim/edge lighting in the sector accent and surface noise,
+   same treatment family as the arches. Baked once per sector, per kind. */
+const DECO_ART = { panel: [], hulk: [] };
+function bakeDecoArt(kind, sec){
+  const cache = DECO_ART[kind]; if (cache[sec]) return cache[sec];
+  const p = PALS[sec];
+  let c;
+  if (kind === 'panel') { // slab plating: lit top face → shadowed base
+    const W = 96, H = 148; c = mkCanvas(W, H); const g = c.getContext('2d');
+    const lg = g.createLinearGradient(0, 0, W * .35, H);
+    lg.addColorStop(0, shade2(p.deco, .22)); lg.addColorStop(.45, p.deco); lg.addColorStop(1, shade2(p.deco, -.42));
+    g.fillStyle = lg; g.fillRect(0, 0, W, H);
+    g.strokeStyle = shade2(p.obE, -.15); g.lineWidth = 1.5; g.strokeRect(.75, .75, W - 1.5, H - 1.5);
+    // panel seams + inner frame
+    g.globalAlpha = .5; g.strokeStyle = shade2(p.deco, -.5);
+    g.strokeRect(6, 6, W - 12, H - 12);
+    g.beginPath(); g.moveTo(6, H * .38); g.lineTo(W - 6, H * .38);
+    g.moveTo(W * .55, H * .38); g.lineTo(W * .55, H - 6); g.stroke();
+    // rim light: sun edge along top + left, in the sector accent
+    g.globalAlpha = .85; g.strokeStyle = shade2(p.line, .1); g.lineWidth = 2;
+    g.beginPath(); g.moveTo(1, H - 4); g.lineTo(1, 1); g.lineTo(W - 4, 1); g.stroke();
+    g.globalAlpha = .3; g.strokeStyle = p.line;
+    g.beginPath(); g.moveTo(3.5, H - 8); g.lineTo(3.5, 3.5); g.lineTo(W - 8, 3.5); g.stroke();
+    // surface noise + a few lit ports
+    g.globalAlpha = 1;
+    for (let i = 0; i < 64; i++) {
+      g.fillStyle = i % 2 ? 'rgba(255,255,255,.045)' : 'rgba(0,0,0,.09)';
+      g.fillRect(rnd(2, W - 4), rnd(2, H - 4), rnd(1, 3.2), rnd(1, 2.4));
+    }
+    g.fillStyle = p.line; g.globalAlpha = .55;
+    for (let i = 0; i < 4; i++) g.fillRect(W * .18 + i * W * .17, H * .5, 2, 2);
+  } else { // debris hulk: faceted pentagon, catching the key light on its top edges
+    const N2 = 176, w = 150; c = mkCanvas(N2, N2); const g = c.getContext('2d');
+    g.translate(N2 / 2, N2 / 2);
+    const pts = [[-w/2, 0], [-w*.15, -w*.3], [w/2, -w*.1], [w*.3, w*.25], [-w*.2, w*.3]];
+    const path = () => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < 5; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); };
+    const lg = g.createLinearGradient(-w * .45, -w * .4, w * .4, w * .35);
+    lg.addColorStop(0, shade2(p.deco, .26)); lg.addColorStop(.5, p.deco); lg.addColorStop(1, shade2(p.deco, -.48));
+    path(); g.fillStyle = lg; g.fill();
+    // interior facets — two shadow planes off the mid ridge
+    g.globalAlpha = .35; g.fillStyle = shade2(p.deco, -.55);
+    g.beginPath(); g.moveTo(pts[2][0], pts[2][1]); g.lineTo(pts[3][0], pts[3][1]);
+    g.lineTo(w * .04, w * .02); g.closePath(); g.fill();
+    g.globalAlpha = .22;
+    g.beginPath(); g.moveTo(pts[3][0], pts[3][1]); g.lineTo(pts[4][0], pts[4][1]);
+    g.lineTo(-w * .05, w * .05); g.closePath(); g.fill();
+    g.globalAlpha = .3; g.strokeStyle = shade2(p.deco, -.6); g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(pts[1][0], pts[1][1]); g.lineTo(w * .02, w * .01); g.lineTo(pts[3][0], pts[3][1]); g.stroke();
+    // rim light along the two top edges, sector accent
+    g.globalAlpha = .9; g.strokeStyle = shade2(p.line, .12); g.lineWidth = 2.4; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); g.lineTo(pts[1][0], pts[1][1]); g.lineTo(pts[2][0], pts[2][1]); g.stroke();
+    g.globalAlpha = .45; g.strokeStyle = shade2(p.obE, -.1); g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(pts[2][0], pts[2][1]); g.lineTo(pts[3][0], pts[3][1]);
+    g.lineTo(pts[4][0], pts[4][1]); g.lineTo(pts[0][0], pts[0][1]); g.stroke();
+    // pocked surface noise, clipped to the hull
+    path(); g.save(); g.clip(); g.globalAlpha = 1;
+    for (let i = 0; i < 46; i++) {
+      g.fillStyle = i % 2 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.12)';
+      const rx = rnd(-w * .48, w * .48), ry = rnd(-w * .28, w * .28);
+      g.beginPath(); g.arc(rx, ry, rnd(.8, 3), 0, TAU); g.fill();
+    }
+    g.restore();
+  }
+  cache[sec] = c; return c;
+}
 function drawDeco(d){
   P(d.x, d.y, d.z); const s = PRJ.s, x = PRJ.x, y = PRJ.y;
   // empyrean sky is bright — its plating stays faint so the action reads
   const a = clamp(1.5 - d.z / 1800, 0, d.kind === 'panel' ? (G.sec === 4 ? .18 : .5) : .8) *
-    (1 - (G.skimK || 0)); // junk fades out over the deck
-  if (a < .02) return;
+    (1 - (G.skimK || 0)) * // junk fades out over the deck
+    clamp((d.z - 230) / 300, 0, 1); // 4.1: and fades OUT approaching the camera —
+  if (a < .02) return;              // a near slab never parks as a giant flat wall
+  // 4.1: cap on-screen scale as a second guard against wall-sized slabs
+  const sc = Math.min(s, Math.min(cw, ch) * .55 / Math.max(d.w, d.h || d.w));
   ctx.globalAlpha = a;
   if (d.kind === 'panel') {
-    ctx.fillStyle = PAL.deco; ctx.strokeStyle = PAL.obE; ctx.lineWidth = 1;
-    const w = d.w * s, h = d.h * s;
-    ctx.fillRect(x - w/2, y - h/2, w, h); ctx.strokeRect(x - w/2, y - h/2, w, h);
-    ctx.strokeStyle = PAL.line; ctx.globalAlpha = a * .5;
-    ctx.strokeRect(x - w/2 + 3*s, y - h/2 + 3*s, w - 6*s, h - 6*s);
+    const img = bakeDecoArt('panel', G.sec);
+    const w = d.w * sc, h = d.h * sc;
+    ctx.drawImage(img, x - w/2, y - h/2, w, h);
   } else if (d.kind === 'wisp') {
     const img = glow(PAL.neb[1]); const dd = d.w * s * 3;
     ctx.globalAlpha = a * .3;
     ctx.drawImage(img, x - dd/2, y - dd/2, dd, dd);
   } else {
-    ctx.fillStyle = PAL.deco; ctx.strokeStyle = PAL.obE;
+    const img = bakeDecoArt('hulk', G.sec);
     ctx.save(); ctx.translate(x, y); ctx.rotate(d.rot || 0);
-    const w = d.w * s;
-    ctx.beginPath();
-    ctx.moveTo(-w/2, 0); ctx.lineTo(-w*.15, -w*.3); ctx.lineTo(w/2, -w*.1);
-    ctx.lineTo(w*.3, w*.25); ctx.lineTo(-w*.2, w*.3); ctx.closePath();
-    ctx.fill(); ctx.globalAlpha = a * .6; ctx.stroke();
+    const w = d.w * sc * 1.17; // bake canvas is 176 for a 150 hull — keep world size
+    ctx.drawImage(img, -w/2, -w/2, w, w);
     ctx.restore();
   }
   ctx.globalAlpha = 1;
@@ -2036,6 +2105,9 @@ function drawShipSprite(x, y, sc, rot, rollP, alpha, vb){
 }
 function drawShipEnt(){
   if (!ship.alive) return;
+  // 4.1: on the over screens the wreck fades out before the menu lands
+  const fd = (G.state === 'over' || G.state === 'endover') ? clamp(1 - (G.overT || 0) * 1.7, 0, 1) : 1;
+  if (fd <= .02) return;
   // ribbon trail — thickens with lateral motion + throttle
   const tc = skinC(D.skin, 'trail');
   if (TRAIL.length >= 6) {
@@ -2044,20 +2116,50 @@ function drawShipEnt(){
     const thick = 6 + (ship.mv || 0) + clamp((G.spd - CFG.SPD0) * .004, 0, 2);
     for (let i = 0; i < TRAIL.length - 3; i += 2) {
       const a = 1 - i / TRAIL.length;
-      ctx.globalAlpha = a * .42; ctx.lineWidth = a * thick;
+      ctx.globalAlpha = a * .42 * fd; ctx.lineWidth = a * thick;
       ctx.beginPath(); ctx.moveTo(TRAIL[i], TRAIL[i + 1]); ctx.lineTo(TRAIL[i + 2], TRAIL[i + 3]); ctx.stroke();
     }
     ctx.restore();
   }
-  // 4.0: soft blob shadow on the deck during terrain skims
+  // 4.1: deck shadow during terrain skims — anchored to the VISIBLE floor ahead
+  // of the ship (at the ship's own plane the deck projects below the screen),
+  // offset/scaled/faded by altitude, plus a dust/spray wake when flying low
   if ((G.skimK || 0) > .05) {
-    P(ship.x, FLOORY, ship.z);
-    const hgt = clamp((FLOORY - ship.y) / 300, .2, 1);
+    const alt = clamp((FLOORY - ship.y) / 320, 0, 1); // 0 = scraping the deck
+    const hy2 = vpy + cam.oy, hF = Math.max(60, FLOORY - cam.y);
+    P(ship.x, ship.y, ship.z);
+    const yS = Math.min(PRJ.y + (30 + alt * 92) * (ch / 844), ch - 6);
+    const zs = clamp(hF * FOVE / Math.max(30, yS - hy2), CFG.SHIP_Z, 2200);
+    // screen-space anchor: straight below the hull — that's what sells altitude
+    const sx2 = PRJ.x, sy3 = Math.min(hy2 + hF * FOVE / zs, ch - 4), ss = FOVE / zs;
+    const sw2 = Math.max(10, (30 - alt * 12) * ss);
     ctx.fillStyle = '#000000';
-    ctx.globalAlpha = G.skimK * .36 * (1.3 - hgt * .75);
-    ctx.beginPath();
-    ctx.ellipse(PRJ.x, PRJ.y, 30 * PRJ.s * (1.45 - hgt * .55), 8.5 * PRJ.s * (1.45 - hgt * .55), 0, 0, TAU);
-    ctx.fill(); ctx.globalAlpha = 1;
+    ctx.globalAlpha = fd * G.skimK * (.4 - alt * .24);
+    ctx.beginPath(); ctx.ellipse(sx2, sy3, sw2, sw2 * .3, 0, 0, TAU); ctx.fill();
+    ctx.globalAlpha = fd * G.skimK * (.2 - alt * .13); // soft penumbra
+    ctx.beginPath(); ctx.ellipse(sx2, sy3, sw2 * 1.7, sw2 * .48, 0, 0, TAU); ctx.fill();
+    if (alt < .45) { // low pass: the deck kicks up a spray/dust wake line
+      const wk = (1 - alt / .45) * G.skimK * fd;
+      const wc = ['#BFF2F0', '#FFB37A', '#FFF3C8'][G.skim ? G.skim.surf : G.lastSurf || 0];
+      const wg2 = glow(wc);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round'; ctx.strokeStyle = wc;
+      for (const sd2 of [-1, 1]) { // billowing dust tongues off each side of the keel
+        for (let j = 0; j < 3; j++) {
+          const jt = j / 3 + .18;
+          const fl2 = .55 + .45 * Math.sin(G.rt * (26 + j * 7) + sd2 * 2.1 + j * 2.3);
+          const px2 = sx2 + sd2 * sw2 * (.45 + jt * 1.1), py2 = sy3 + sw2 * (.06 + jt * .26);
+          const dd2 = sw2 * (.52 - jt * .2) * (1 + fl2 * .4);
+          ctx.globalAlpha = wk * (.42 - jt * .22) * fl2;
+          ctx.drawImage(wg2, px2 - dd2 / 2, py2 - dd2 / 2, dd2, dd2);
+        }
+      }
+      const pd2 = sw2 * (1.6 + .3 * Math.sin(G.rt * 23)); // billow puff at the contact point
+      ctx.globalAlpha = wk * .3;
+      ctx.drawImage(wg2, sx2 - pd2 / 2, sy3 - pd2 * .3, pd2, pd2 * .55);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.globalAlpha = 1;
   }
   P(ship.x, ship.y, ship.z);
   const x = PRJ.x, y = PRJ.y, sc = PRJ.s * .95;
@@ -2069,7 +2171,7 @@ function drawShipEnt(){
   ctx.globalCompositeOperation = 'lighter';
   const ug = glow(tc);
   const ud = Math.min(58 * sc, 250); // caps: the intro flyby gets HUGE — keep raster sane
-  ctx.globalAlpha = .26; ctx.drawImage(ug, x - ud / 2, y - ud / 2, ud, ud);
+  ctx.globalAlpha = .26 * fd; ctx.drawImage(ug, x - ud / 2, y - ud / 2, ud, ud);
   const spdF = 1 + (G.spd - CFG.SPD0) / 900 + (G.warp > 0 ? .8 : 0) + (G.boostK || 0); // boost doubles the flare
   const wg = glow('#FFFFFF');
   const nozDX = 3.4 * sc * Math.cos(rollA || 0); // nozzles converge as the hull rolls
@@ -2077,9 +2179,9 @@ function drawShipEnt(){
     const fl = 1 + .3 * Math.sin(G.rt * 47 + nd2 * 1.7) + .14 * Math.sin(G.rt * 83 + nd2);
     const e1 = Math.min(19 * fl * spdF * sc, 220), e2 = Math.min(9.5 * fl * sc, 96);
     const nx2 = x + nd2 * nozDX, ny2 = y + 6.4 * sc;
-    ctx.globalAlpha = .75; ctx.drawImage(ug, nx2 - e1 / 2, ny2 - e1 / 2, e1, e1);
-    ctx.globalAlpha = .4; ctx.drawImage(ug, nx2 - e1 * .4, ny2 + e1 * .22 - e1 * .4, e1 * .8, e1 * .8);
-    ctx.globalAlpha = .95; ctx.drawImage(wg, nx2 - e2 / 2, ny2 - e2 / 2, e2, e2);
+    ctx.globalAlpha = .75 * fd; ctx.drawImage(ug, nx2 - e1 / 2, ny2 - e1 / 2, e1, e1);
+    ctx.globalAlpha = .4 * fd; ctx.drawImage(ug, nx2 - e1 * .4, ny2 + e1 * .22 - e1 * .4, e1 * .8, e1 * .8);
+    ctx.globalAlpha = .95 * fd; ctx.drawImage(wg, nx2 - e2 / 2, ny2 - e2 / 2, e2, e2);
   }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   // motion-blur ghosts while rolling
@@ -2088,16 +2190,16 @@ function drawShipEnt(){
     if (GH.length > 12) GH.shift();
     for (let k2 = 3; k2 <= 9; k2 += 3) {
       const g2 = GH[GH.length - 1 - k2]; if (!g2) break;
-      drawShipSprite(g2.x, g2.y, sc, ship.bank * .55, g2.p, .2 - k2 * .017);
+      drawShipSprite(g2.x, g2.y, sc, ship.bank * .55, g2.p, (.2 - k2 * .017) * fd);
     }
   } else GH.length = 0;
-  drawShipSprite(x, y, sc, ship.bank * .55, rollP, blink ? .4 : 1, ship.vb || 0);
+  drawShipSprite(x, y, sc, ship.bank * .55, rollP, (blink ? .4 : 1) * fd, ship.vb || 0);
   // roll streak arcs
   if (rollP > 0) {
-    ctx.strokeStyle = tc; ctx.globalAlpha = .7 * Math.sin(rollP * Math.PI);
+    ctx.strokeStyle = tc; ctx.globalAlpha = .7 * Math.sin(rollP * Math.PI) * fd;
     ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(x, y, 26 * sc, rollA, rollA + 2.2); ctx.stroke();
-    ctx.globalAlpha = .35 * Math.sin(rollP * Math.PI);
+    ctx.globalAlpha = .35 * Math.sin(rollP * Math.PI) * fd;
     ctx.beginPath(); ctx.arc(x, y, 33 * sc, rollA + 3, rollA + 4.8); ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -2945,9 +3047,30 @@ function drawOb(o){
   } else if (o.kind === 'sarch') { // painted gateway arch on the skim path
     const img = ART.set.arch || bakeSet('arch');
     const w = o.R * 3.6 * s, h = w * img.height / img.width;
-    ctx.globalAlpha = fog;
+    // 4.1: arches must read against bright horizons — solid at spawn distance,
+    // easing back to natural fog as they close in
+    const far = clamp((o.z - 800) / 1500, 0, 1);
+    const vis = clamp(fog + far * .6, fog, 1);
+    ctx.globalAlpha = vis * .55 * far; // dark backing ring: silhouette punch on white-gold skies
+    ctx.strokeStyle = 'rgba(8,14,22,1)'; ctx.lineWidth = Math.max(2, o.R * .3 * s);
+    ctx.beginPath(); ctx.arc(0, -o.R * .08 * s, o.R * s, Math.PI * .9, TAU + Math.PI * .1); ctx.stroke();
+    ctx.globalAlpha = vis;
     ctx.drawImage(img, -w / 2, -h * .55, w, h);
-    ctx.strokeStyle = '#66E8FF'; ctx.globalAlpha = fog * (.35 + .3 * Math.sin(G.rt * 5));
+    // rim glow + beacon lights in the sector accent — bright far, natural near
+    const acc = PAL.line, aR = o.R * s, aCy = -o.R * .08 * s;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = acc; ctx.lineWidth = Math.max(1.5, o.R * .07 * s);
+    ctx.globalAlpha = .18 + far * .55;
+    ctx.beginPath(); ctx.arc(0, aCy, aR, Math.PI, TAU); ctx.stroke();
+    const bglow = glow(acc), bd = Math.max(7, o.R * s * (.35 + far * .45));
+    for (let i = 0; i < 7; i++) {
+      const ba = Math.PI + (i / 6) * Math.PI;
+      const tw3 = .6 + .4 * Math.sin(G.rt * 5 + i * 1.9);
+      ctx.globalAlpha = (.3 + far * .7) * tw3;
+      ctx.drawImage(bglow, Math.cos(ba) * aR - bd / 2, aCy + Math.sin(ba) * aR - bd / 2, bd, bd);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = '#66E8FF'; ctx.globalAlpha = vis * (.35 + .3 * Math.sin(G.rt * 5));
     ctx.lineWidth = Math.max(1, s * 2);
     ctx.beginPath(); ctx.arc(0, 0, o.R * .62 * s, 0, TAU); ctx.stroke(); // the thread line
   } else if (o.kind === 'tower' || o.kind === 'spire') { // deck columns, base ON the floor
@@ -3177,35 +3300,58 @@ function drawSkimFloor(){
   const hw = cw * (land ? 1.22 : 1.45), hh = hw * hz.height / hz.width * (land ? .4 : .5);
   ctx.globalAlpha = k * .96;
   ctx.drawImage(hz, vpx - hw / 2 - (G.bendAhead || 0) * .22 - cam.x * .14, yFar - hh + 2, hw, hh);
-  // Mode-7 floor slices — geometric spacing (dense at the horizon, tall near the
-  // camera) keeps the op count low for the software rasterizer: ~40 draws, not 100+
-  const yBot = ch + 60, N = (low ? 24 : 36) * (land ? .6 : 1) | 0, span = yBot - yFar;
+  // Mode-7 floor slices — geometric spacing, biased denser near the camera (4.1:
+  // exponent 1.7 → 1.45 + more slices) so tall near slices can't read as bands
+  const yBot = ch + 60, N = (low ? 30 : 46) * (land ? .65 : 1) | 0, span = yBot - yFar;
   const sc2 = G.skim ? G.skim.scroll : 0;
-  for (let i = 0; i < N; i++) {
-    const y0 = yFar + span * Math.pow(i / N, 1.7);
-    const y1 = yFar + span * Math.pow((i + 1) / N, 1.7);
-    const z = h * FOVE / Math.max(8, y0 - hy);          // far edge of the slice
-    const z1 = h * FOVE / Math.max(8, y1 - hy);         // near edge
-    const s = FOVE / z;
-    // source rect spans the slice's true z-range — keeps the texture readable,
-    // not smeared, even with tall near-camera slices
-    let v = ((sc2 + z) / texWorld) % 1; if (v < 0) v += 1;
-    const sh2 = clamp((z - z1) / texWorld * texW, 1, texW * .5);
-    const sy = Math.min((1 - v) * (texW - 1), texW - sh2);
-    const worldW = (cw + 180) / s;
-    const u0 = cam.x - pox(z) + (-90 - vpx - cam.ox) / s;
-    let un = (u0 / texWorld) % 1; if (un < 0) un += 1;
-    const sx = un * texW, sw = Math.min(texW * 6.98, worldW / texWorld * texW);
-    ctx.globalAlpha = k * clamp(.14 + (i / N) * 1.3, 0, 1);
-    ctx.drawImage(tex, sx, sy, sw, sh2, -90, y0, cw + 180, y1 - y0 + 1.2);
+  let FL_SUB = 20; // sub-slice budget per frame (bend shear smoothing)
+  ctx.globalAlpha = k; // constant slice alpha — the horizon fade is a continuous
+  for (let i = 0; i < N; i++) { // gradient below, never a per-slice alpha step
+    const t0 = Math.pow(i / N, 1.45), t1 = Math.pow((i + 1) / N, 1.45);
+    // adaptive sub-slicing: through a bend the path offset shears each slice
+    // sideways as a block — split the TALL near-camera slices (where the step
+    // is chunky) when it would exceed ~3px; far slices are 1-3px tall and hide
+    // it. A hard budget keeps the extra draw count bounded at low cost.
+    let kSub = 1;
+    if (i > N * .42 && FL_SUB > 0) {
+      const zA = h * FOVE / Math.max(8, yFar + span * t0 - hy);
+      const zB = h * FOVE / Math.max(8, yFar + span * t1 - hy);
+      const shear = Math.abs(pox(zA) - pox(zB)) * FOVE / zA;
+      if (shear > 3) { kSub = Math.min(3, Math.ceil(shear / 3), 1 + FL_SUB); FL_SUB -= kSub - 1; }
+    }
+    for (let j = 0; j < kSub; j++) {
+      const y0 = yFar + span * (t0 + (t1 - t0) * j / kSub);
+      const y1 = yFar + span * (t0 + (t1 - t0) * (j + 1) / kSub);
+      const z = h * FOVE / Math.max(8, y0 - hy);          // far edge of the slice
+      const z1 = h * FOVE / Math.max(8, y1 - hy);         // near edge
+      const s = FOVE / z;
+      // source rect spans the slice's true z-range; the strip is two tiles tall,
+      // so adjacent slices always sample CONTIGUOUS rows — cross-fade-free seams
+      let v = ((sc2 + z) / texWorld) % 1; if (v < 0) v += 1;
+      const sh2 = clamp((z - z1) / texWorld * texW, 1, texW);
+      const sy = (1 - v) * texW;
+      const worldW = (cw + 180) / s;
+      const u0 = cam.x - pox(z) + (-90 - vpx - cam.ox) / s;
+      let un = (u0 / texWorld) % 1; if (un < 0) un += 1;
+      const sx = un * texW, sw = Math.min(texW * 6.98, worldW / texWorld * texW);
+      ctx.drawImage(tex, sx, sy, sw, sh2, -90, y0, cw + 180, y1 - y0 + 1.2);
+    }
   }
-  // haze fades the deck into the horizon
+  // haze fades the deck into the horizon — one smooth gradient does what the old
+  // stepped slice alphas did, without the banding
   const sky = SKY[surf];
-  const hzH = (ch - yFar) * .4;
-  const hzg = ctx.createLinearGradient(0, yFar - 2, 0, yFar + hzH);
-  hzg.addColorStop(0, sky[2]); hzg.addColorStop(1, sky[2] + '00');
-  ctx.globalAlpha = k * .55; ctx.fillStyle = hzg;
-  ctx.fillRect(-90, yFar - 2, cw + 180, hzH + 2);
+  const hzH = (ch - yFar) * .48;
+  const hzg = ctx.createLinearGradient(0, yFar - 3, 0, yFar + hzH);
+  hzg.addColorStop(0, sky[2]); hzg.addColorStop(.38, sky[2] + '8C'); hzg.addColorStop(1, sky[2] + '00');
+  ctx.globalAlpha = k * .82; ctx.fillStyle = hzg;
+  ctx.fillRect(-90, yFar - 3, cw + 180, hzH + 3);
+  // feather the horizon band upward too — the skyline art melts into the haze
+  // instead of ending on a hard edge where floor meets sky
+  const fh = Math.max(10, hh * .38);
+  const fg2 = ctx.createLinearGradient(0, yFar - fh, 0, yFar + 1);
+  fg2.addColorStop(0, sky[2] + '00'); fg2.addColorStop(1, sky[2] + 'B4');
+  ctx.globalAlpha = k * .72; ctx.fillStyle = fg2;
+  ctx.fillRect(-90, yFar - fh, cw + 180, fh + 1);
   ctx.globalAlpha = 1;
 }
 
@@ -4535,12 +4681,18 @@ function drawEcho(e){
     if (e.flash > 0) { ctx.globalAlpha = .85; ctx.drawImage(main.white, main.x0 * s, main.y0 * s, main.w * s, main.h * s); }
   }
   ctx.restore(); ctx.globalAlpha = 1;
-  // mini HP bar over its head
-  const bw = 110;
-  ctx.fillStyle = 'rgba(10,16,32,.8)'; rr(x - bw / 2, y - 150 * s - 14, bw, 7, 3.5); ctx.fill();
-  ctx.fillStyle = '#B78CFF';
-  if (e.hp > 0) { rr(x - bw / 2 + 1, y - 150 * s - 13, (bw - 2) * clamp(e.hp / e.hpMax, 0, 1), 5, 2.5); ctx.fill(); }
-  tx2('ECHO · ' + ECHO_NAMES[e.kind], x, y - 150 * s - 24, 9, '#C9B8F2', 'center', 800);
+  // mini HP bar over its head — 4.1: queued behind any live banner (BELT n /
+  // BOSS ECHO) so the nameplate never overprints it; eases in once it clears
+  e.na = clamp((e.na || 0) + (G.banner ? -.2 : .06), 0, 1);
+  if (e.na > .03) {
+    const bw = 110, na = easeIO(e.na);
+    ctx.globalAlpha = na;
+    ctx.fillStyle = 'rgba(10,16,32,.8)'; rr(x - bw / 2, y - 150 * s - 14, bw, 7, 3.5); ctx.fill();
+    ctx.fillStyle = '#B78CFF';
+    if (e.hp > 0) { rr(x - bw / 2 + 1, y - 150 * s - 13, (bw - 2) * clamp(e.hp / e.hpMax, 0, 1), 5, 2.5); ctx.fill(); }
+    tx2('ECHO · ' + ECHO_NAMES[e.kind], x, y - 150 * s - 24, 9, '#C9B8F2', 'center', 800, na);
+    ctx.globalAlpha = 1;
+  }
 }
 function winRun(){
   D.runsWon++; D.wins5 = (D.wins5 | 0) + 1; // 3.0: the full 5-sector run (Sovereign skin)
