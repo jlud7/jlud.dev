@@ -1,0 +1,54 @@
+name: iPhone Duo stock
+
+# Runs kelindi/apple-stock (pinned to a reviewed commit) and pings ntfy when an
+# iPhone Duo is available for pickup near Brickell or by 2-hour courier.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iphone-duo-stock
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      POSTAL_CODE: '33131'
+      COUNTRY: us
+      PRODUCT: iphone-duo
+      # 256GB and 512GB in Star White and Night Sky
+      MODELS: MK1E4LL/A, MK1G4LL/A, MK1F4LL/A, MK1H4LL/A
+      MAX_DISTANCE_KM: '50'
+      NTFY_TOPIC: duo-alert-466715881502
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: kelindi/apple-stock
+          ref: aa419dc4e7517cc2cd50206701840c00bfd89478
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Restore last seen availability
+        uses: actions/cache/restore@v4
+        with:
+          path: .state.json
+          key: duo-state-${{ github.run_id }}
+          restore-keys: duo-state-
+      - name: Check
+        run: npm run check
+      - name: Save availability
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .state.json
+          key: duo-state-${{ github.run_id }}
