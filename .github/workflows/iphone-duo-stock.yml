@@ -4,8 +4,9 @@ name: iPhone Duo stock
 # iPhone Duo is available for pickup near Brickell or by 2-hour courier.
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
+  # Schedule paused: Apple's stock API returns 541 to GitHub's runners.
+  # schedule:
+  #   - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
